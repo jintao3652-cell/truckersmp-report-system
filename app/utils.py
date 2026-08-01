@@ -3,6 +3,8 @@ import smtplib
 import hashlib
 import json
 import subprocess
+import urllib.request
+import re
 from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,10 +16,40 @@ from .models import RateLimitEvent
 
 
 ALLOWED_EXTENSIONS = {"mp4", "mov", "mkv", "webm", "avi"}
+VIDEO_MIME_PREFIXES = {"video/", "application/ogg"}
 
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def real_video_mime(path):
+    """Inspect magic bytes when python-magic is installed; None means unknown."""
+    try:
+        import magic
+        mime = magic.from_file(path, mime=True)
+        return mime if mime.startswith("video/") or mime in VIDEO_MIME_PREFIXES else None
+    except (ImportError, OSError):
+        return None
+
+
+def valid_report_id(value):
+    """Accept common TruckersMP report identifiers while rejecting arbitrary input."""
+    return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{2,63}", (value or "").strip()))
+
+
+def audit_hash(previous_hash, audit):
+    payload = "|".join(str(value or "") for value in (previous_hash, audit.video_id, audit.admin_id, audit.action, audit.reason, audit.source, audit.ip_address, audit.user_agent, audit.video_title, audit.created_at))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def prepare_audit(audit):
+    from .models import ModerationAudit
+    previous = ModerationAudit.query.order_by(ModerationAudit.id.desc()).first()
+    audit.previous_hash = previous.record_hash if previous else None
+    audit.created_at = utcnow()
+    audit.record_hash = audit_hash(audit.previous_hash, audit)
+    return audit
 
 
 def utcnow():
@@ -33,6 +65,10 @@ def make_storage_name(original_name: str) -> str:
     stem = secure_filename(original_name) or "video"
     base, ext = os.path.splitext(stem)
     return f"{uuid4().hex}_{base}{ext.lower()}"
+
+
+def make_share_code():
+    return uuid4().hex[:16]
 
 
 def dated_storage_dir(base_dir, when=None):
@@ -85,12 +121,47 @@ def send_email(app, recipient, subject, body):
     return True
 
 
+def send_notification(app, subject, body):
+    """Send optional webhook and email notifications without making them required."""
+    delivered = False
+    webhook = app.config.get("NOTIFY_WEBHOOK_URL")
+    if webhook:
+        try:
+            payload = json.dumps({"subject": subject, "text": body}).encode()
+            req = urllib.request.Request(webhook, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=10):
+                delivered = True
+        except Exception:
+            app.logger.exception("Notification webhook failed")
+    recipient = app.config.get("NOTIFY_ADMIN_EMAIL")
+    if recipient:
+        try:
+            delivered = send_email(app, recipient, subject, body) or delivered
+        except Exception:
+            app.logger.exception("Notification email failed")
+    return delivered
+
+
+def retention_days(app, category="default"):
+    """Resolve RETENTION_POLICY values like 'default:365,reports:90,permanent:0'."""
+    raw = str(app.config.get("RETENTION_POLICY", "365"))
+    values = {"default": raw}
+    if "," in raw:
+        values = {part.split(":", 1)[0].strip(): part.split(":", 1)[1].strip() for part in raw.split(",") if ":" in part}
+    try:
+        value = int(values.get(category, values.get("default", "365")))
+        # A zero-day policy means permanent retention, represented by a far-future date.
+        return 365000 if value == 0 else (value if value > 0 else 365)
+    except ValueError:
+        return 365
+
+
 def check_rate_limit(app, action, ip_address):
     """Return (allowed, retry_after_seconds), storing only a keyed IP hash."""
     now = utcnow()
     digest = hashlib.sha256(f"{app.config['SECRET_KEY']}:{ip_address or 'unknown'}".encode()).hexdigest()
     event = RateLimitEvent.query.filter_by(action=action, key_hash=digest).first()
-    prefix = "UPLOAD_RATE_LIMIT_" if action == "upload" else "RATE_LIMIT_"
+    prefix = "UPLOAD_RATE_LIMIT_" if action == "upload" else ("SHARE_RATE_LIMIT_" if action == "share" else "RATE_LIMIT_")
     window = app.config[f"{prefix}WINDOW_SECONDS"]
     max_attempts = app.config[f"{prefix}MAX_ATTEMPTS"]
     block_seconds = app.config[f"{prefix}BLOCK_SECONDS"]

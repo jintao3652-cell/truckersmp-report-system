@@ -1,0 +1,8 @@
+[Unit]
+Description=Process TruckersMP media jobs
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/truckersmp-report-site
+ExecStart=/var/www/truckersmp-report-site/.venv/bin/python media_worker.py
+EnvironmentFile=/var/www/truckersmp-report-site/.env

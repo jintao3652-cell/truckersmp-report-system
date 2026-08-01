@@ -1,0 +1,11 @@
+[Unit]
+Description=Run TruckersMP media worker every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+Unit=truckersmp-media-worker.service
+
+[Install]
+WantedBy=timers.target

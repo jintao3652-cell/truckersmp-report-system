@@ -1,0 +1,19 @@
+groups:
+  - name: truckersmp-report-system
+    rules:
+      - alert: TruckersMPDiskNearlyFull
+        expr: truckersmp_disk_alert == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TruckersMP 视频磁盘空间不足"
+          description: "视频目录磁盘使用率已达到配置阈值。"
+      - alert: TruckersMPPendingVideosHigh
+        expr: truckersmp_videos_pending > 50
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "待审核视频堆积"
+          description: "待审核视频数量超过 50。"

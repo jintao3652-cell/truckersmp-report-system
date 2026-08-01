@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from pathlib import Path
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -20,6 +20,12 @@ login_manager.login_message_category = "warning"
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_object(config_class)
+    if app.config.get("SENTRY_DSN"):
+        try:
+            import sentry_sdk
+            sentry_sdk.init(dsn=app.config["SENTRY_DSN"], traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.05")))
+        except ImportError:
+            app.logger.warning("SENTRY_DSN configured but sentry-sdk is not installed")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     if app.config["ENVIRONMENT"] == "production" and not app.config["SECRET_KEY"]:
         raise RuntimeError("SECRET_KEY must be set in production")
@@ -33,12 +39,16 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     csrf.init_app(app)
 
+    @app.context_processor
+    def translations():
+        return {"lang": (request.accept_languages.best_match(["zh", "en"]) or "zh")}
+
     @app.after_request
     def security_headers(response):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault("Content-Security-Policy", "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; media-src 'self' blob:")
+        response.headers.setdefault("Content-Security-Policy", "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; media-src 'self' blob:; img-src 'self' data:")
         if app.config["ENVIRONMENT"] == "production":
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
@@ -49,7 +59,9 @@ def create_app(config_class=Config):
         try:
             db.session.execute(text("SELECT 1"))
             video_dir = Path(app.config["VIDEO_FOLDER"])
-            return {"status": "ok", "database": "ok", "video_folder": video_dir.exists(), "writable": os.access(video_dir, os.W_OK)}
+            exists, writable = video_dir.exists(), os.access(video_dir, os.W_OK)
+            status = "ok" if exists and writable else "degraded"
+            return {"status": status, "database": "ok", "video_folder": exists, "writable": writable}, (200 if status == "ok" else 503)
         except Exception:
             return {"status": "error"}, 503
 
@@ -58,12 +70,18 @@ def create_app(config_class=Config):
     from .routes.video import video_bp
     from .routes.admin import admin_bp
     from .routes.api import api_bp
+    from .routes.api_v2 import api_v2_bp
+    from .routes.metrics import metrics_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(video_bp, url_prefix="/videos")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_bp)
+    app.register_blueprint(api_v2_bp)
+    # API clients authenticate with bearer tokens; browser forms remain CSRF protected.
+    csrf.exempt(api_bp)
+    app.register_blueprint(metrics_bp)
 
     if app.config["AUTO_CREATE_DB"]:
         with app.app_context():

@@ -18,5 +18,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const form = document.querySelector('form[enctype="multipart/form-data"]');
   const progress = document.querySelector("#upload-progress");
-  if (form && progress) form.addEventListener("submit", () => { progress.classList.remove("d-none"); progress.removeAttribute("value"); });
+  if (form && progress) form.addEventListener("submit", async (event) => {
+    const file = input && input.files && input.files[0];
+    if (!file || typeof uploadInChunks !== "function" || file.size < 16 * 1024 * 1024) return;
+    event.preventDefault();
+    progress.classList.remove("d-none");
+    window.onUploadProgress = (value) => { progress.value = value; };
+    try {
+      const metadata = {
+        report_id: form.querySelector('[name="report_id"]')?.value || "api",
+        title: form.querySelector('[name="title"]')?.value || file.name,
+        description: form.querySelector('[name="description"]')?.value || ""
+      };
+      const result = await uploadInChunks(file, null, metadata);
+      form.querySelector('input[type="submit"]').disabled = true;
+      window.location.href = `/videos/${result.id}`;
+    } catch (error) {
+      progress.classList.add("d-none");
+      alert(error.message);
+    }
+  });
 });

@@ -15,13 +15,54 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    role = db.Column(db.String(20), default="user", nullable=False, index=True)
     login_failed_count = db.Column(db.Integer, default=0, nullable=False)
     locked_until = db.Column(db.DateTime)
     upload_disabled = db.Column(db.Boolean, default=False, nullable=False)
+    quota_bytes = db.Column(db.BigInteger)
     created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
 
     videos = db.relationship("Video", backref="uploader", lazy=True)
     reset_tokens = db.relationship("PasswordResetToken", backref="user", cascade="all, delete-orphan")
+    api_tokens = db.relationship("ApiToken", backref="user", cascade="all, delete-orphan")
+
+
+class ApiToken(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    label = db.Column(db.String(80), default="default", nullable=False)
+    scopes = db.Column(db.String(255), default="read", nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
+    last_used_at = db.Column(db.DateTime)
+    revoked_at = db.Column(db.DateTime)
+
+
+class UploadSession(db.Model):
+    id = db.Column(db.String(64), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    report_id = db.Column(db.String(64), default="api", nullable=False)
+    title = db.Column(db.String(140), default="", nullable=False)
+    description = db.Column(db.Text, default="", nullable=False)
+    expected_size = db.Column(db.BigInteger, nullable=False)
+    received_size = db.Column(db.BigInteger, default=0, nullable=False)
+    temp_path = db.Column(db.String(500), nullable=False)
+    status = db.Column(db.String(20), default="active", nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
+
+
+class MediaJob(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("video.id", ondelete="CASCADE"), nullable=False, index=True)
+    job_type = db.Column(db.String(32), nullable=False, default="probe_thumbnail")
+    status = db.Column(db.String(20), nullable=False, default="pending", index=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    error = db.Column(db.Text, nullable=False, default="")
+    created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
+    video = db.relationship("Video", backref=db.backref("media_jobs", cascade="all, delete-orphan"))
 
 
 class PasswordResetToken(db.Model):
@@ -63,7 +104,14 @@ class ModerationAudit(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     action = db.Column(db.String(20), nullable=False)
     reason = db.Column(db.Text, default="", nullable=False)
+    source = db.Column(db.String(20), default="web", nullable=False)
+    ip_address = db.Column(db.String(64), nullable=True)
+    user_agent = db.Column(db.String(500), nullable=True)
+    video_title = db.Column(db.String(140), nullable=True)
+    previous_hash = db.Column(db.String(64), nullable=True)
+    record_hash = db.Column(db.String(64), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False, index=True)
+    admin = db.relationship("User", foreign_keys=[admin_id])
 
 
 class Video(db.Model):
@@ -79,6 +127,7 @@ class Video(db.Model):
     duration = db.Column(db.Integer, default=0, nullable=False)
     status = db.Column(db.String(20), default="pending", nullable=False)
     rejection_reason = db.Column(db.Text, default="", nullable=False)
+    resubmitted_at = db.Column(db.DateTime)
     uploaded_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
     expire_time = db.Column(
         db.DateTime,
@@ -86,6 +135,7 @@ class Video(db.Model):
         nullable=False,
     )
     uploader_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    share_code = db.Column(db.String(32), unique=True, nullable=False, index=True)
 
 
 @login_manager.user_loader

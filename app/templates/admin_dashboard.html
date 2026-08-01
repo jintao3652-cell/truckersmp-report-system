@@ -1,28 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="h4 mb-3">管理后台</h1>
-<a class="btn btn-sm btn-outline-secondary mb-3" href="{{ url_for('admin.audit_csv') }}">导出审计 CSV</a>
-<div class="btn-group mb-3">
-  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">全部</a>
-  <a class="btn btn-sm btn-outline-warning" href="{{ url_for('admin.dashboard', status='pending') }}">待审核</a>
-  <a class="btn btn-sm btn-outline-success" href="{{ url_for('admin.dashboard', status='approved') }}">已通过</a>
-  <a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin.dashboard', status='rejected') }}">已拒绝</a>
-</div>
+<h1 class="h4 mb-3">管理后台 <span class="badge text-bg-warning">待审核 {{ pending_count }}</span></h1>
+<div class="mb-3"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.audit_csv') }}">导出审计 CSV</a> <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.users_page') }}">用户管理</a> <a class="btn btn-sm btn-outline-info" href="{{ url_for('admin.moderation_history') }}">审核历史</a></div>
+<div class="btn-group mb-3"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">全部</a><a class="btn btn-sm btn-outline-warning" href="{{ url_for('admin.dashboard', status='pending') }}">待审核</a><a class="btn btn-sm btn-outline-success" href="{{ url_for('admin.dashboard', status='approved') }}">已通过</a><a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin.dashboard', status='rejected') }}">已拒绝</a></div>
 <div class="list-group">
-{% for video in videos %}
-<div class="list-group-item d-flex justify-content-between align-items-center">
-  <div><strong>{{ video.title }}</strong><br><small>{{ video.report_id }} / {{ video.status }}</small></div>
-  <div class="btn-group">
-    <form method="post" action="{{ url_for('admin.approve', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">通过</button></form>
-    <form method="post" action="{{ url_for('admin.reject', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control form-control-sm d-inline-block" style="width:180px" name="reason" placeholder="拒绝原因"><button class="btn btn-sm btn-danger">拒绝</button></form>
-    <form method="post" action="{{ url_for('admin.delete', video_id=video.id, status=request.args.get('status', '')) }}" onsubmit="return confirm('确认删除这个视频及其文件吗？');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">删除</button></form>
-  </div>
+{% for video in videos %}<div class="list-group-item"><div class="d-flex justify-content-between gap-3"><div><strong>{{ video.title }}</strong><br><small>{{ video.report_id }} · {{ video.status }} · 上传者：{{ video.uploader.username }}</small>{% if video.rejection_reason %}<br><small class="text-danger">拒绝原因：{{ video.rejection_reason }}</small>{% endif %}</div>
+<div class="btn-group align-self-start"><form method="post" action="{{ url_for('admin.approve', video_id=video.id, status=request.args.get('status','')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">通过</button></form><form method="post" action="{{ url_for('admin.reject', video_id=video.id, status=request.args.get('status','')) }}"><input name="reason" class="form-control form-control-sm" placeholder="拒绝原因（可选）"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger">拒绝</button></form><form method="post" action="{{ url_for('admin.delete', video_id=video.id, status=request.args.get('status','')) }}" onsubmit="return confirm('确认删除该视频及文件？');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">删除</button></form><form method="post" action="{{ url_for('admin.regenerate_share', video_id=video.id, status=request.args.get('status','')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-secondary">重置分享码</button></form></div></div></div>{% else %}<div class="text-muted">暂无视频</div>{% endfor %}
 </div>
 {% if pagination and pagination.pages > 1 %}<nav class="mt-3"><ul class="pagination">{% for p in pagination.iter_pages() %}{% if p %}<li class="page-item {% if p == pagination.page %}active{% endif %}"><a class="page-link" href="{{ url_for('admin.dashboard', status=request.args.get('status',''), page=p) }}">{{ p }}</a></li>{% endif %}{% endfor %}</ul></nav>{% endif %}
-{% else %}<div class="text-muted">暂无视频</div>{% endfor %}
-</div>
-<h2 class="h5 mt-4">登录记录</h2>
-<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>时间</th><th>账号</th><th>结果</th><th>IP</th><th>设备</th><th>详细信息</th></tr></thead><tbody>
-{% for item in logins %}<tr><td>{{ item.created_at }}</td><td>{{ item.user.username if item.user else item.username_input }}</td><td>{{ '成功' if item.success else '失败' }}</td><td>{{ item.ip_address }}</td><td>{{ item.device_type }}</td><td><small>{{ item.user_agent }}<br>{{ item.accept_language }}<br>{{ item.referrer or '-' }}</small></td></tr>{% else %}<tr><td colspan="6">暂无记录</td></tr>{% endfor %}
-</tbody></table></div>
+<h2 class="h5 mt-4">登录记录</h2><div class="table-responsive"><table class="table table-sm"><tr><th>时间</th><th>账号</th><th>结果</th><th>IP</th><th>设备</th></tr>{% for item in logins %}<tr><td>{{ item.created_at }}</td><td>{{ item.user.username if item.user else item.username_input }}</td><td>{{ '成功' if item.success else '失败' }}</td><td>{{ item.ip_address }}</td><td>{{ item.device_type }}</td></tr>{% endfor %}</table></div>
 {% endblock %}

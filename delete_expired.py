@@ -5,6 +5,7 @@ from app.utils import utcnow
 
 from app import create_app, db
 from app.models import Video
+from app.storage import get_storage
 
 app = create_app()
 
@@ -21,12 +22,21 @@ def main():
             logging.info("Expired video id=%s path=%s", video.id, video.file_path)
             if args.dry_run:
                 continue
-            for path in (video.file_path, video.thumbnail_path):
-                if path and os.path.exists(path):
-                    try:
-                        os.remove(path)
-                    except OSError:
-                        logging.exception("Failed to remove %s", path)
+            if app.config.get("STORAGE_BACKEND") == "s3":
+                storage = get_storage(app.config)
+                for key in (video.file_path, video.thumbnail_path):
+                    if key:
+                        try:
+                            storage.delete(key)
+                        except Exception:
+                            logging.exception("Failed to remove object %s", key)
+            else:
+                for path in (video.file_path, video.thumbnail_path):
+                    if path and os.path.exists(path):
+                        try:
+                            os.remove(path)
+                        except OSError:
+                            logging.exception("Failed to remove %s", path)
             db.session.delete(video)
             deleted += 1
         if not args.dry_run:

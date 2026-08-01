@@ -19,9 +19,29 @@ class Config:
     MAX_USER_STORAGE_BYTES = int(os.getenv("MAX_USER_STORAGE_BYTES", 20 * 1024 * 1024 * 1024))
     FFPROBE_PATH = os.getenv("FFPROBE_PATH", shutil.which("ffprobe") or "")
     FFMPEG_PATH = os.getenv("FFMPEG_PATH", shutil.which("ffmpeg") or "ffmpeg")
-    REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "0") == "1"
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")
+    STORAGE_S3_BUCKET = os.getenv("STORAGE_S3_BUCKET", "")
+    STORAGE_S3_ENDPOINT = os.getenv("STORAGE_S3_ENDPOINT", "")
+    STORAGE_S3_REGION = os.getenv("STORAGE_S3_REGION", "")
+    STORAGE_S3_PREFIX = os.getenv("STORAGE_S3_PREFIX", "videos")
+    STORAGE_S3_PUBLIC_BASE = os.getenv("STORAGE_S3_PUBLIC_BASE", "")
+    STORAGE_SIGNED_URL_SECONDS = int(os.getenv("STORAGE_SIGNED_URL_SECONDS", "900"))
+    REQUIRE_REAL_MIME = os.getenv("REQUIRE_REAL_MIME", "0") == "1"
+    MEDIA_PROCESSING_ASYNC = os.getenv("MEDIA_PROCESSING_ASYNC", "0") == "1"
+    MEDIA_JOB_MAX_ATTEMPTS = int(os.getenv("MEDIA_JOB_MAX_ATTEMPTS", "3"))
+    RETENTION_POLICY = os.getenv("RETENTION_POLICY", "365")
+    DISK_ALERT_THRESHOLD = int(os.getenv("DISK_ALERT_THRESHOLD", "90"))
+    NOTIFY_WEBHOOK_URL = os.getenv("NOTIFY_WEBHOOK_URL", "")
+    NOTIFY_ADMIN_EMAIL = os.getenv("NOTIFY_ADMIN_EMAIL", "")
+    API_REQUIRE_BEARER = os.getenv("API_REQUIRE_BEARER", "1" if ENVIRONMENT == "production" else "0") == "1"
+    SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+    UPLOAD_SESSION_EXPIRES_SECONDS = int(os.getenv("UPLOAD_SESSION_EXPIRES_SECONDS", "86400"))
+    UPLOAD_CHUNK_MAX_BYTES = int(os.getenv("UPLOAD_CHUNK_MAX_BYTES", str(16 * 1024 * 1024)))
+    SHARE_RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("SHARE_RATE_LIMIT_MAX_ATTEMPTS", "120"))
+    SHARE_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("SHARE_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+    REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "1" if ENVIRONMENT == "production" else "0") == "1"
     MEDIA_ACCEL_REDIRECT = os.getenv("MEDIA_ACCEL_REDIRECT", "1") == "1"
-    AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "1") == "1"
+    AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "0" if ENVIRONMENT == "production" else "1") == "1"
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
