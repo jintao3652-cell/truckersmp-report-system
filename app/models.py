@@ -59,7 +59,7 @@ class LoginAudit(db.Model):
 
 class ModerationAudit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    video_id = db.Column(db.Integer, db.ForeignKey("video.id"), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("video.id", ondelete="SET NULL"), nullable=True)
     admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     action = db.Column(db.String(20), nullable=False)
     reason = db.Column(db.Text, default="", nullable=False)

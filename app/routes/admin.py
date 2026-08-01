@@ -41,7 +41,8 @@ def audit_csv():
     for item in LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(5000):
         writer.writerow([item.created_at, "login", item.username_input, "", item.success, item.ip_address, "", item.user_id, item.user_agent])
     for item in ModerationAudit.query.order_by(ModerationAudit.created_at.desc()).limit(5000):
-        writer.writerow([item.created_at, "moderation", "", item.action, "", "", item.video_id, item.admin_id, item.reason])
+        admin = db.session.get(User, item.admin_id)
+        writer.writerow([item.created_at, "moderation", admin.username if admin else "", item.action, "", "", item.video_id or "", item.admin_id, item.reason])
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=audit.csv"})
 
 
@@ -86,7 +87,7 @@ def approve(video_id):
 def reject(video_id):
     video = Video.query.get_or_404(video_id)
     video.status = "rejected"
-    video.rejection_reason = request.form.get("reason", "").strip()[:5000]
+    video.rejection_reason = request.form.get("reason", "").strip()[:5000] or "管理员审核拒绝"
     db.session.add(ModerationAudit(video_id=video.id, admin_id=current_user.id, action="reject", reason=video.rejection_reason))
     db.session.commit()
     flash("已拒绝。", "warning")

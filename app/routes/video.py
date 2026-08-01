@@ -42,6 +42,8 @@ def upload():
             return render_template("upload.html", form=form), 429
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
+            return render_template("upload.html", form=form), 400
+        if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
         if not file or not allowed_file(file.filename):
             return render_template("upload.html", form=form), 400
