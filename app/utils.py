@@ -142,6 +142,19 @@ def send_notification(app, subject, body):
     return delivered
 
 
+def send_user_notification(app, user, subject, body):
+    if not user or not user.email:
+        return False
+    try:
+        delivered = send_email(app, user.email, subject, body)
+        if not delivered:
+            app.logger.warning("User notification was not delivered to %s", user.email)
+        return delivered
+    except Exception:
+        app.logger.exception("User notification failed for %s", user.email)
+        return False
+
+
 def notify_share_view(app, video, viewer_ip=None):
     """Notify the owner once per cooldown window when a public share is viewed."""
     if not video.uploader or not video.uploader.email:

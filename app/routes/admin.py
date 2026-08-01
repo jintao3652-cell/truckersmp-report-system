@@ -8,7 +8,7 @@ from flask_login import current_user
 from .. import db
 from ..models import ApiToken, LoginAudit, ModerationAudit, User, Video
 from ..storage import get_storage
-from ..utils import send_notification
+from ..utils import send_notification, send_user_notification
 from ..utils import audit_hash, make_share_code, utcnow
 
 admin_bp = Blueprint("admin", __name__)
@@ -221,6 +221,7 @@ def approve(video_id):
     video.rejection_reason = ""
     db.session.add(audit_context(video, "approve"))
     db.session.commit()
+    send_user_notification(current_app, video.uploader, "你的视频已通过审核", f"视频《{video.title}》已通过审核，现在可以使用分享链接。")
     send_notification(current_app, "视频审核通过", f"视频 #{video.id} 已通过审核。")
     flash("已通过。", "success")
     return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
@@ -233,6 +234,7 @@ def reject(video_id):
     video.rejection_reason = request.form.get("reason", "").strip()[:5000] or "管理员审核拒绝"
     db.session.add(audit_context(video, "reject", video.rejection_reason))
     db.session.commit()
+    send_user_notification(current_app, video.uploader, "你的视频未通过审核", f"视频《{video.title}》未通过审核。\n原因：{video.rejection_reason}")
     send_notification(current_app, "视频审核被拒绝", f"视频 #{video.id} 被拒绝：{video.rejection_reason}")
     flash("已拒绝。", "warning")
     return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))

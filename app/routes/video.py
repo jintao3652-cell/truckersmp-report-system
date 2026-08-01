@@ -86,6 +86,7 @@ def upload():
             elif not make_thumbnail(final_path, thumbnail_path, current_app.config["FFMPEG_PATH"]):
                 thumbnail_path = ""
 
+            stored_size = os.path.getsize(final_path)
             file_ref, thumbnail_ref = final_path, thumbnail_path
             if current_app.config.get("STORAGE_BACKEND") == "s3":
                 storage = get_storage(current_app.config)
@@ -103,7 +104,7 @@ def upload():
                 stored_filename=stored_name,
                 file_path=file_ref,
                 thumbnail_path=thumbnail_ref,
-                file_size=os.path.getsize(final_path),
+                file_size=stored_size,
                 duration=duration or 0,
                 uploader_id=current_user.id,
                 uploaded_at=utcnow(),

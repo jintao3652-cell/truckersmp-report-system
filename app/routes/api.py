@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from .. import db
 from ..models import ApiToken, MediaJob, ModerationAudit, UploadSession, User, Video
 from ..storage import get_storage
-from ..utils import allowed_file, dated_storage_dir, ensure_dir, make_share_code, make_thumbnail, prepare_audit, probe_video, real_video_mime, retention_days, send_notification, utcnow, valid_report_id
+from ..utils import allowed_file, dated_storage_dir, ensure_dir, make_share_code, make_thumbnail, prepare_audit, probe_video, real_video_mime, retention_days, send_notification, send_user_notification, utcnow, valid_report_id
 
 api_bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
@@ -23,6 +23,7 @@ def token_user():
         return None
     token.last_used_at = utcnow()
     db.session.commit()
+    send_user_notification(current_app, video.uploader, "你的视频已通过审核", f"视频《{video.title}》已通过 API 审核。")
     return token.user
 
 
@@ -82,6 +83,7 @@ def approve_video(video_id):
     video.rejection_reason = ""
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="approve", source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
     db.session.commit()
+    send_user_notification(current_app, video.uploader, "你的视频未通过审核", f"视频《{video.title}》未通过审核。\n原因：{reason}")
     return jsonify({"id": video.id, "status": video.status})
 
 
