@@ -153,10 +153,10 @@ def notify_share_view(app, video, viewer_ip=None):
         db.session.add(notice)
         db.session.flush()
     cooldown = app.config.get("SHARE_VIEW_NOTIFY_COOLDOWN_SECONDS", 3600)
+    notice.view_count += 1
     if notice.last_notified_at and (now - notice.last_notified_at).total_seconds() < cooldown:
         db.session.commit()
         return False
-    notice.view_count += 1
     notice.last_notified_at = now
     db.session.commit()
     try:

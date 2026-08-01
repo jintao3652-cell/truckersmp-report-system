@@ -107,6 +107,9 @@ def update_quota(user_id):
 
 @admin_bp.post("/videos/<int:video_id>/regenerate-share")
 def regenerate_share(video_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     video = Video.query.get_or_404(video_id)
     old_code = video.share_code
     video.share_code = make_share_code()
@@ -118,6 +121,9 @@ def regenerate_share(video_id):
 
 @admin_bp.post("/videos/<int:video_id>/toggle-share")
 def toggle_share(video_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     video = Video.query.get_or_404(video_id)
     video.share_enabled = not video.share_enabled
     db.session.add(audit_context(video, "share_enable" if video.share_enabled else "share_revoke", "Share availability changed"))
@@ -128,6 +134,9 @@ def toggle_share(video_id):
 
 @admin_bp.post("/tokens/<int:token_id>/revoke")
 def revoke_token(token_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     token = ApiToken.query.get_or_404(token_id)
     token.revoked_at = utcnow()
     db.session.commit()

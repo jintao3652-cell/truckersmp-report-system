@@ -1,6 +1,6 @@
 async function uploadInChunks(file, token, metadata = {}, chunkSize = 8 * 1024 * 1024) {
   const auth = token ? {Authorization: `Bearer ${token}`} : {};
-  const resumeKey = `upload-session:${file.name}:${file.size}`;
+  const resumeKey = `upload-session:${file.name}:${file.size}:${file.lastModified}`;
   const resumeId = localStorage.getItem(resumeKey);
   const init = await fetch("/api/v1/uploads", {method: "POST", headers: {...auth, "Content-Type": "application/json"}, body: JSON.stringify({filename: file.name, size: file.size, resume_id: resumeId, ...metadata})});
   if (!init.ok) throw new Error((await init.json()).error || "upload init failed");

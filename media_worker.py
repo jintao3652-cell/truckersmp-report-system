@@ -2,9 +2,10 @@
 import os
 import tempfile
 from app import create_app, db
-from app.models import MediaJob
+from app.models import MediaJob, ModerationAudit
 from app.utils import make_thumbnail, probe_video, utcnow
 from app.storage import get_storage
+from app.utils import audit_hash
 
 app = create_app()
 with app.app_context():
@@ -39,6 +40,10 @@ with app.app_context():
             if job.status == "failed":
                 job.video.status = "rejected"
                 job.video.rejection_reason = "媒体校验失败，文件不是有效视频或处理失败。"
+                previous = ModerationAudit.query.order_by(ModerationAudit.id.desc()).first()
+                audit = ModerationAudit(video_id=job.video.id, admin_id=job.video.uploader_id, action="reject", reason=job.video.rejection_reason, source="worker", video_title=job.video.title, previous_hash=previous.record_hash if previous else None, created_at=utcnow())
+                audit.record_hash = audit_hash(audit.previous_hash, audit)
+                db.session.add(audit)
                 try:
                     if app.config.get("STORAGE_BACKEND") == "s3":
                         storage.delete(job.video.file_path)
