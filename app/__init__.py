@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from pathlib import Path
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -18,6 +18,10 @@ login_manager.login_message_category = "warning"
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_object(config_class)
+    if app.config["ENVIRONMENT"] == "production" and not app.config["SECRET_KEY"]:
+        raise RuntimeError("SECRET_KEY must be set in production")
+    if not app.config["SECRET_KEY"]:
+        app.config["SECRET_KEY"] = "development-only-change-me"
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
     Path(app.config["VIDEO_FOLDER"]).mkdir(parents=True, exist_ok=True)
 

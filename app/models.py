@@ -47,7 +47,7 @@ class Video(db.Model):
     thumbnail_path = db.Column(db.String(500), default="", nullable=False)
     file_size = db.Column(db.BigInteger, default=0, nullable=False)
     duration = db.Column(db.Integer, default=0, nullable=False)
-    status = db.Column(db.String(20), default="approved", nullable=False)
+    status = db.Column(db.String(20), default="pending", nullable=False)
     uploaded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     expire_time = db.Column(
         db.DateTime,

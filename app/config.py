@@ -5,7 +5,8 @@ from pathlib import Path
 
 class Config:
     BASE_DIR = Path(__file__).resolve().parent.parent
-    SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
+    SECRET_KEY = os.getenv("SECRET_KEY", "")
+    ENVIRONMENT = os.getenv("FLASK_ENV", os.getenv("ENVIRONMENT", "development")).lower()
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
         f"sqlite:///{BASE_DIR / 'truckersmp.db'}",

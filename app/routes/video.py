@@ -79,12 +79,16 @@ def upload():
 @video_bp.route("/<int:video_id>")
 def detail(video_id):
     video = Video.query.get_or_404(video_id)
+    if video.status != "approved" and not (current_user.is_authenticated and (current_user.is_admin or video.uploader_id == current_user.id)):
+        abort(404)
     return render_template("video_detail.html", video=video, file_url=url_for("video.media", video_id=video.id))
 
 
 @video_bp.route("/media/<int:video_id>")
 def media(video_id):
     video = Video.query.get_or_404(video_id)
+    if video.status != "approved" and not (current_user.is_authenticated and (current_user.is_admin or video.uploader_id == current_user.id)):
+        abort(404)
     if not os.path.exists(video.file_path):
         abort(404)
     folder = os.path.dirname(video.file_path)

@@ -1,4 +1,6 @@
 import os
+import argparse
+import logging
 from datetime import datetime, timezone
 
 from app import create_app, db
@@ -8,15 +10,27 @@ app = create_app()
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true", help="Only report expired videos")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     with app.app_context():
         expired = Video.query.filter(Video.expire_time < datetime.now(timezone.utc)).all()
         deleted = 0
         for video in expired:
-            if video.file_path and os.path.exists(video.file_path):
-                os.remove(video.file_path)
+            logging.info("Expired video id=%s path=%s", video.id, video.file_path)
+            if args.dry_run:
+                continue
+            for path in (video.file_path, video.thumbnail_path):
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        logging.exception("Failed to remove %s", path)
             db.session.delete(video)
             deleted += 1
-        db.session.commit()
+        if not args.dry_run:
+            db.session.commit()
         print(f"Deleted {deleted} expired videos.")
 
 
