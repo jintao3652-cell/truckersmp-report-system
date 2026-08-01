@@ -70,6 +70,7 @@ def check_rate_limit(app, action, ip_address):
     prefix = "UPLOAD_RATE_LIMIT_" if action == "upload" else "RATE_LIMIT_"
     window = app.config[f"{prefix}WINDOW_SECONDS"]
     max_attempts = app.config[f"{prefix}MAX_ATTEMPTS"]
+    block_seconds = app.config[f"{prefix}BLOCK_SECONDS"]
     if not event or (now - event.window_started_at).total_seconds() >= window:
         if not event:
             event = RateLimitEvent(action=action, key_hash=digest, window_started_at=now, attempts=0)
@@ -81,8 +82,8 @@ def check_rate_limit(app, action, ip_address):
         return False, max(1, int((event.blocked_until - now).total_seconds()))
     event.attempts += 1
     if event.attempts > max_attempts:
-        event.blocked_until = now + timedelta(seconds=app.config["RATE_LIMIT_BLOCK_SECONDS"])
+        event.blocked_until = now + timedelta(seconds=block_seconds)
         db.session.commit()
-        return False, app.config["RATE_LIMIT_BLOCK_SECONDS"]
+        return False, block_seconds
     db.session.commit()
     return True, 0

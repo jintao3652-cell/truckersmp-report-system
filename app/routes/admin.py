@@ -51,7 +51,7 @@ def approve(video_id):
     video.status = "approved"
     db.session.commit()
     flash("已通过。", "success")
-    return redirect(url_for("admin.dashboard"))
+    return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
 
 
 @admin_bp.post("/reject/<int:video_id>")
@@ -60,4 +60,4 @@ def reject(video_id):
     video.status = "rejected"
     db.session.commit()
     flash("已拒绝。", "warning")
-    return redirect(url_for("admin.dashboard"))
+    return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
