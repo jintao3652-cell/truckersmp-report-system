@@ -42,9 +42,10 @@ def create_app(config_class=Config):
     app.register_blueprint(video_bp, url_prefix="/videos")
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
-    with app.app_context():
-        from . import models
-        db.create_all()
+    if app.config["AUTO_CREATE_DB"]:
+        with app.app_context():
+            from . import models
+            db.create_all()
 
     @app.errorhandler(404)
     def not_found(_error):

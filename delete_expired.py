@@ -1,7 +1,7 @@
 import os
 import argparse
 import logging
-from datetime import datetime, timezone
+from app.utils import utcnow
 
 from app import create_app, db
 from app.models import Video
@@ -15,7 +15,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     with app.app_context():
-        expired = Video.query.filter(Video.expire_time < datetime.now(timezone.utc)).all()
+        expired = Video.query.filter(Video.expire_time < utcnow()).all()
         deleted = 0
         for video in expired:
             logging.info("Expired video id=%s path=%s", video.id, video.file_path)

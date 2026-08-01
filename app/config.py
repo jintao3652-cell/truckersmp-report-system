@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import timedelta
 from pathlib import Path
 
@@ -15,6 +16,11 @@ class Config:
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "uploads"))
     VIDEO_FOLDER = os.getenv("VIDEO_FOLDER", "/sdk/truckersmp-videos")
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 2 * 1024 * 1024 * 1024))
+    MAX_USER_STORAGE_BYTES = int(os.getenv("MAX_USER_STORAGE_BYTES", 20 * 1024 * 1024 * 1024))
+    FFPROBE_PATH = os.getenv("FFPROBE_PATH", shutil.which("ffprobe") or "")
+    REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "0") == "1"
+    MEDIA_ACCEL_REDIRECT = os.getenv("MEDIA_ACCEL_REDIRECT", "1") == "1"
+    AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "1") == "1"
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

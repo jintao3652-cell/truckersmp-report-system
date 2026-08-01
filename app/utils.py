@@ -1,6 +1,8 @@
 import os
 import smtplib
 import hashlib
+import json
+import subprocess
 from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -44,6 +46,22 @@ def format_bytes(num: int) -> str:
             return f"{num:.1f} {unit}"
         num /= 1024.0
     return f"{num:.1f} PB"
+
+
+def probe_video(path, ffprobe_path):
+    if not ffprobe_path:
+        return None
+    result = subprocess.run(
+        [ffprobe_path, "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_type,duration", "-of", "json", path],
+        capture_output=True, text=True, timeout=30, check=False,
+    )
+    if result.returncode != 0:
+        raise ValueError("file is not a valid video")
+    data = json.loads(result.stdout or "{}")
+    streams = data.get("streams", [])
+    if not streams or streams[0].get("codec_type") != "video":
+        raise ValueError("file contains no video stream")
+    return int(float(streams[0].get("duration") or 0))
 
 
 def send_email(app, recipient, subject, body):

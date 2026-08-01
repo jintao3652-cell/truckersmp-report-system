@@ -2,13 +2,13 @@ import os
 from mimetypes import guess_type
 from datetime import timedelta
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from .. import db
 from ..forms import UploadForm
 from ..models import Video
-from ..utils import allowed_file, check_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, utcnow
+from ..utils import allowed_file, check_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, probe_video, utcnow
 
 video_bp = Blueprint("video", __name__)
 
@@ -44,6 +44,10 @@ def upload():
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
             return render_template("upload.html", form=form)
+        current_usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
+        if current_usage + (request.content_length or 0) > current_app.config["MAX_USER_STORAGE_BYTES"]:
+            flash("已超过个人视频容量配额。", "danger")
+            return render_template("upload.html", form=form), 413
 
         stored_name = make_storage_name(file.filename)
         upload_dir = ensure_dir(current_app.config["UPLOAD_FOLDER"])
@@ -51,6 +55,9 @@ def upload():
         final_path = None
         try:
             file.save(temp_path)
+            duration = probe_video(temp_path, current_app.config["FFPROBE_PATH"])
+            if duration is None and current_app.config["REQUIRE_FFPROBE"]:
+                raise ValueError("ffprobe is required for video validation")
             final_dir = ensure_dir(dated_storage_dir(current_app.config["VIDEO_FOLDER"], utcnow()))
             final_path = os.path.join(final_dir, stored_name)
             os.replace(temp_path, final_path)
@@ -63,7 +70,7 @@ def upload():
                 stored_filename=stored_name,
                 file_path=final_path,
                 file_size=os.path.getsize(final_path),
-                duration=0,
+                duration=duration or 0,
                 uploader_id=current_user.id,
                 uploaded_at=utcnow(),
                 expire_time=utcnow() + timedelta(days=365),
@@ -99,6 +106,11 @@ def media(video_id):
         abort(404)
     if not os.path.exists(video.file_path):
         abort(404)
-    folder = os.path.dirname(video.file_path)
-    filename = os.path.basename(video.file_path)
-    return send_from_directory(folder, filename, as_attachment=False)
+    response = send_file(video.file_path, as_attachment=False, conditional=True)
+    # Nginx can serve the large file directly when configured with X-Accel-Redirect.
+    if current_app.config.get("MEDIA_ACCEL_REDIRECT", True):
+        relative_path = os.path.relpath(video.file_path, current_app.config["VIDEO_FOLDER"]).replace(os.sep, "/")
+        response.headers["X-Accel-Redirect"] = f"/protected-videos/{relative_path}"
+        response.headers["Content-Disposition"] = "inline"
+        response.direct_passthrough = True
+    return response
