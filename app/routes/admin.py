@@ -53,7 +53,9 @@ def dashboard():
 
 @admin_bp.get("/moderation-history")
 def moderation_history():
-    return render_template("moderation_history.html", audits=ModerationAudit.query.order_by(ModerationAudit.created_at.desc()).limit(500).all())
+    page = max(request.args.get("page", 1, type=int), 1)
+    pagination = ModerationAudit.query.order_by(ModerationAudit.created_at.desc()).paginate(page=page, per_page=50, error_out=False)
+    return render_template("moderation_history.html", audits=pagination.items, pagination=pagination)
 
 
 @admin_bp.get("/users")
@@ -64,6 +66,22 @@ def users_page():
         query = query.filter(db.or_(User.username.contains(search), User.email.contains(search)))
     users = query.paginate(page=max(request.args.get("page", 1, type=int), 1), per_page=25, error_out=False)
     return render_template("admin_users.html", users=users.items, pagination=users, tokens=ApiToken.query.filter_by(revoked_at=None).order_by(ApiToken.created_at.desc()).all())
+
+@admin_bp.post("/users/<int:user_id>/role")
+def update_role(user_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
+    user = User.query.get_or_404(user_id)
+    role = request.form.get("role", "user").strip().lower()
+    if role not in {"user", "moderator", "admin"}:
+        flash("角色无效。", "danger")
+        return redirect(url_for("admin.users_page"))
+    user.role = role
+    user.is_admin = role == "admin"
+    db.session.commit()
+    flash("用户角色已更新。", "success")
+    return redirect(url_for("admin.users_page"))
 
 
 @admin_bp.post("/users/<int:user_id>/tokens")
