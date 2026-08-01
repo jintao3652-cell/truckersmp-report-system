@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h4 mb-3">上传视频</h1>
+<form method="post" enctype="multipart/form-data">
+  {{ form.hidden_tag() }}
+  <div class="mb-3">{{ form.report_id.label(class="form-label") }}{{ form.report_id(class="form-control") }}</div>
+  <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
+  <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows="4") }}</div>
+  <div class="mb-3">{{ form.video_file.label(class="form-label") }}{{ form.video_file(class="form-control") }}</div>
+  {{ form.submit(class="btn btn-primary") }}
+</form>
+{% endblock %}

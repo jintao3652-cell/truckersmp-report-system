@@ -1,0 +1,14 @@
+[Unit]
+Description=TruckersMP Report Site
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/truckersmp-report-site
+EnvironmentFile=/var/www/truckersmp-report-site/.env
+ExecStart=/var/www/truckersmp-report-site/.venv/bin/gunicorn -c /var/www/truckersmp-report-site/gunicorn.conf.py wsgi:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
