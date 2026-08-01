@@ -54,6 +54,15 @@ class LoginAudit(db.Model):
     user = db.relationship("User", backref="login_audits")
 
 
+class ModerationAudit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("video.id"), nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    action = db.Column(db.String(20), nullable=False)
+    reason = db.Column(db.Text, default="", nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False, index=True)
+
+
 class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     report_id = db.Column(db.String(64), index=True, nullable=False)
@@ -66,6 +75,7 @@ class Video(db.Model):
     file_size = db.Column(db.BigInteger, default=0, nullable=False)
     duration = db.Column(db.Integer, default=0, nullable=False)
     status = db.Column(db.String(20), default="pending", nullable=False)
+    rejection_reason = db.Column(db.Text, default="", nullable=False)
     uploaded_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
     expire_time = db.Column(
         db.DateTime,

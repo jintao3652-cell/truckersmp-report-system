@@ -16,4 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
       label.textContent = `${file.name} (${size})`;
     });
   }
+  const form = document.querySelector('form[enctype="multipart/form-data"]');
+  const progress = document.querySelector("#upload-progress");
+  if (form && progress) form.addEventListener("submit", () => { progress.classList.remove("d-none"); progress.removeAttribute("value"); });
 });

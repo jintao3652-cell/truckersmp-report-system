@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="h4 mb-3">上传视频</h1>
+<div class="alert alert-info">已使用 {{ (used_bytes / 1024 / 1024 / 1024)|round(2) }} GiB / {{ (quota_bytes / 1024 / 1024 / 1024)|round(2) }} GiB</div>
 <form method="post" enctype="multipart/form-data">
   {{ form.hidden_tag() }}
   <div class="mb-3">{{ form.report_id.label(class="form-label") }}{{ form.report_id(class="form-control") }}</div>
@@ -17,5 +18,6 @@
   </div>
   {{ form.submit(class="btn btn-primary") }}
 </form>
+<progress id="upload-progress" class="w-100 d-none" max="100" value="0"></progress>
 <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 {% endblock %}

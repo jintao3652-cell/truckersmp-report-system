@@ -43,7 +43,8 @@ def upload():
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
-            return render_template("upload.html", form=form)
+    usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
+    return render_template("upload.html", form=form, used_bytes=usage, quota_bytes=current_app.config["MAX_USER_STORAGE_BYTES"])
         stored_name = make_storage_name(file.filename)
         upload_dir = ensure_dir(current_app.config["UPLOAD_FOLDER"])
         temp_path = os.path.join(upload_dir, stored_name)
@@ -99,7 +100,8 @@ def upload():
             return render_template("upload.html", form=form), 500
         flash("上传成功，等待审核。", "success")
         return redirect(url_for("video.detail", video_id=video.id))
-    return render_template("upload.html", form=form)
+    usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
+    return render_template("upload.html", form=form, used_bytes=usage, quota_bytes=current_app.config["MAX_USER_STORAGE_BYTES"])
 
 
 @video_bp.route("/<int:video_id>")

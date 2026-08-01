@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user
 
 from .. import db
-from ..models import LoginAudit, Video
+from ..models import LoginAudit, ModerationAudit, Video
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -24,9 +24,10 @@ def dashboard():
     query = Video.query.order_by(Video.uploaded_at.desc())
     if status in {"pending", "approved", "rejected"}:
         query = query.filter_by(status=status)
-    videos = query.limit(100).all()
+    page = max(request.args.get("page", 1, type=int), 1)
+    pagination = query.paginate(page=page, per_page=25, error_out=False)
     logins = LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(200).all()
-    return render_template("admin_dashboard.html", videos=videos, logins=logins)
+    return render_template("admin_dashboard.html", videos=pagination.items, pagination=pagination, logins=logins)
 
 
 @admin_bp.post("/delete/<int:video_id>")
@@ -50,6 +51,8 @@ def delete(video_id):
 def approve(video_id):
     video = Video.query.get_or_404(video_id)
     video.status = "approved"
+    video.rejection_reason = ""
+    db.session.add(ModerationAudit(video_id=video.id, admin_id=current_user.id, action="approve"))
     db.session.commit()
     flash("已通过。", "success")
     return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
@@ -59,6 +62,8 @@ def approve(video_id):
 def reject(video_id):
     video = Video.query.get_or_404(video_id)
     video.status = "rejected"
+    video.rejection_reason = request.form.get("reason", "").strip()[:5000]
+    db.session.add(ModerationAudit(video_id=video.id, admin_id=current_user.id, action="reject", reason=video.rejection_reason))
     db.session.commit()
     flash("已拒绝。", "warning")
     return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
