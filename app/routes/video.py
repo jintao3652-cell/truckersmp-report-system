@@ -13,9 +13,11 @@ video_bp = Blueprint("video", __name__)
 
 
 @video_bp.route("/")
+@login_required
 def list_videos():
     query = Video.query
-    query = query.filter(Video.status == "approved")
+    if not current_user.is_admin:
+        query = query.filter(Video.uploader_id == current_user.id)
     query = query.order_by(Video.uploaded_at.desc())
     report_id = request.args.get("report_id", "").strip()
     title = request.args.get("title", "").strip()
@@ -79,7 +81,7 @@ def upload():
 @video_bp.route("/<int:video_id>")
 def detail(video_id):
     video = Video.query.get_or_404(video_id)
-    if video.status != "approved" and not (current_user.is_authenticated and (current_user.is_admin or video.uploader_id == current_user.id)):
+    if not current_user.is_authenticated or (not current_user.is_admin and video.uploader_id != current_user.id):
         abort(404)
     return render_template("video_detail.html", video=video, file_url=url_for("video.media", video_id=video.id))
 
@@ -87,7 +89,7 @@ def detail(video_id):
 @video_bp.route("/media/<int:video_id>")
 def media(video_id):
     video = Video.query.get_or_404(video_id)
-    if video.status != "approved" and not (current_user.is_authenticated and (current_user.is_admin or video.uploader_id == current_user.id)):
+    if not current_user.is_authenticated or (not current_user.is_admin and video.uploader_id != current_user.id):
         abort(404)
     if not os.path.exists(video.file_path):
         abort(404)
