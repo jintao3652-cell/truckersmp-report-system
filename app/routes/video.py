@@ -43,6 +43,8 @@ def upload():
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
+        if not file or not allowed_file(file.filename):
+            return render_template("upload.html", form=form), 400
         if current_user.upload_disabled:
             flash("当前账号已被禁止上传。", "danger")
             return render_template("upload.html", form=form), 403

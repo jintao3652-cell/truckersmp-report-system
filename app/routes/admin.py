@@ -1,4 +1,6 @@
 import os
+import csv
+import io
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -33,12 +35,14 @@ def dashboard():
 @admin_bp.get("/audit.csv")
 def audit_csv():
     from flask import Response
-    rows = ["timestamp,type,username,action,success,ip,details"]
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["timestamp", "type", "username", "action", "success", "ip", "video_id", "admin_id", "details"])
     for item in LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(5000):
-        rows.append(f"{item.created_at},login,{item.username_input},, {item.success},{item.ip_address},{item.user_agent}")
+        writer.writerow([item.created_at, "login", item.username_input, "", item.success, item.ip_address, "", item.user_id, item.user_agent])
     for item in ModerationAudit.query.order_by(ModerationAudit.created_at.desc()).limit(5000):
-        rows.append(f"{item.created_at},moderation,,{item.action},,,{item.reason}")
-    return Response("\n".join(rows), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=audit.csv"})
+        writer.writerow([item.created_at, "moderation", "", item.action, "", "", item.video_id, item.admin_id, item.reason])
+    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=audit.csv"})
 
 
 @admin_bp.post("/users/<int:user_id>/toggle-upload")
@@ -60,6 +64,7 @@ def delete(video_id):
             except OSError:
                 current_app.logger.exception("Failed to remove video file %s", path)
                 file_errors.append(path)
+    db.session.add(ModerationAudit(video_id=video.id, admin_id=current_user.id, action="delete", reason="Deleted by administrator"))
     db.session.delete(video)
     db.session.commit()
     flash("记录已删除，但部分文件删除失败，请检查日志。" if file_errors else "视频及其文件已删除。", "warning" if file_errors else "success")

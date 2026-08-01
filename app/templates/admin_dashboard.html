@@ -14,7 +14,7 @@
   <div><strong>{{ video.title }}</strong><br><small>{{ video.report_id }} / {{ video.status }}</small></div>
   <div class="btn-group">
     <form method="post" action="{{ url_for('admin.approve', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">通过</button></form>
-    <form method="post" action="{{ url_for('admin.reject', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="reason" value="管理员审核拒绝"><button class="btn btn-sm btn-danger">拒绝</button></form>
+    <form method="post" action="{{ url_for('admin.reject', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control form-control-sm d-inline-block" style="width:180px" name="reason" placeholder="拒绝原因"><button class="btn btn-sm btn-danger">拒绝</button></form>
     <form method="post" action="{{ url_for('admin.delete', video_id=video.id, status=request.args.get('status', '')) }}" onsubmit="return confirm('确认删除这个视频及其文件吗？');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">删除</button></form>
   </div>
 </div>
