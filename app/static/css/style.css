@@ -1,2 +1,4 @@
 body { background: #f8f9fa; }
 video { max-height: 70vh; background: #000; }
+.upload-picker { background: #fff; border-style: dashed !important; }
+.upload-picker:hover { background: #f1f7ff; }

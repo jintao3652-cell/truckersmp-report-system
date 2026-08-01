@@ -6,7 +6,16 @@
   <div class="mb-3">{{ form.report_id.label(class="form-label") }}{{ form.report_id(class="form-control") }}</div>
   <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
   <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows="4") }}</div>
-  <div class="mb-3">{{ form.video_file.label(class="form-label") }}{{ form.video_file(class="form-control") }}</div>
+  <div class="mb-3">
+    {{ form.video_file.label(class="form-label") }}
+    <div class="upload-picker border rounded-3 p-4 text-center">
+      {{ form.video_file(class="d-none", id="video-file-input", accept="video/*") }}
+      <button type="button" class="btn btn-outline-primary" id="choose-video">选择视频文件</button>
+      <div class="small text-muted mt-2" id="selected-video">尚未选择文件</div>
+      <div class="small text-muted">支持 MP4、MOV、MKV、WebM、AVI</div>
+    </div>
+  </div>
   {{ form.submit(class="btn btn-primary") }}
 </form>
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 {% endblock %}
