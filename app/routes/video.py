@@ -9,7 +9,7 @@ from .. import db
 from ..forms import UploadForm
 from ..models import MediaJob, Video
 from ..storage import get_storage
-from ..utils import allowed_file, check_rate_limit, check_user_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_share_code, make_storage_name, make_thumbnail, probe_video, real_video_mime, retention_days, send_notification, utcnow, valid_report_id
+from ..utils import allowed_file, check_rate_limit, check_user_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_share_code, make_storage_name, make_thumbnail, notify_share_view, probe_video, real_video_mime, retention_days, send_notification, utcnow, valid_report_id
 
 video_bp = Blueprint("video", __name__)
 
@@ -173,6 +173,7 @@ def shared_detail(share_code):
     video = Video.query.filter_by(share_code=share_code, status="approved", share_enabled=True).first_or_404()
     if video.expire_time < utcnow() or (video.share_expires_at and video.share_expires_at < utcnow()):
         abort(404)
+    notify_share_view(current_app, video, request.remote_addr)
     mime_type = guess_type(video.original_filename)[0] or "application/octet-stream"
     return render_template("video_detail.html", video=video, file_url=url_for("video.shared_media", share_code=share_code), mime_type=mime_type, shared=True)
 
@@ -209,6 +210,7 @@ def shared_media(share_code):
     video = Video.query.filter_by(share_code=share_code, status="approved", share_enabled=True).first_or_404()
     if video.expire_time < utcnow() or (video.share_expires_at and video.share_expires_at < utcnow()):
         abort(404)
+    notify_share_view(current_app, video, request.remote_addr)
     if current_app.config.get("STORAGE_BACKEND") == "s3":
         storage = get_storage(current_app.config)
         if not storage.exists(video.file_path):

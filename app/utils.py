@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from werkzeug.utils import secure_filename
 from . import db
-from .models import RateLimitEvent
+from .models import RateLimitEvent, ShareViewNotice
 
 
 ALLOWED_EXTENSIONS = {"mp4", "mov", "mkv", "webm", "avi"}
@@ -140,6 +140,30 @@ def send_notification(app, subject, body):
         except Exception:
             app.logger.exception("Notification email failed")
     return delivered
+
+
+def notify_share_view(app, video, viewer_ip=None):
+    """Notify the owner once per cooldown window when a public share is viewed."""
+    if not video.uploader or not video.uploader.email:
+        return False
+    now = utcnow()
+    notice = ShareViewNotice.query.filter_by(video_id=video.id).first()
+    if not notice:
+        notice = ShareViewNotice(video_id=video.id, view_count=0)
+        db.session.add(notice)
+        db.session.flush()
+    notice.view_count += 1
+    cooldown = app.config.get("SHARE_VIEW_NOTIFY_COOLDOWN_SECONDS", 3600)
+    if notice.last_notified_at and (now - notice.last_notified_at).total_seconds() < cooldown:
+        db.session.commit()
+        return False
+    notice.last_notified_at = now
+    db.session.commit()
+    try:
+        return send_email(app, video.uploader.email, "你的视频有人通过分享链接查看", f"你的视频《{video.title}》刚刚被通过分享链接查看。\n分享码：{video.share_code}\n查看时间：{now}。")
+    except Exception:
+        app.logger.exception("Share view notification failed for video %s", video.id)
+        return False
 
 
 def retention_days(app, category="default"):

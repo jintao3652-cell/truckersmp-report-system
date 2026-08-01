@@ -140,6 +140,15 @@ class Video(db.Model):
     share_expires_at = db.Column(db.DateTime)
 
 
+class ShareViewNotice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("video.id", ondelete="CASCADE"), nullable=False, unique=True)
+    last_notified_at = db.Column(db.DateTime)
+    view_count = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
+    video = db.relationship("Video", backref=db.backref("share_view_notice", cascade="all, delete-orphan", uselist=False))
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
