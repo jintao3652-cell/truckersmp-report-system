@@ -15,6 +15,9 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    login_failed_count = db.Column(db.Integer, default=0, nullable=False)
+    locked_until = db.Column(db.DateTime)
+    upload_disabled = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow_naive, nullable=False)
 
     videos = db.relationship("Video", backref="uploader", lazy=True)

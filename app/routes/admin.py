@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user
 
 from .. import db
-from ..models import LoginAudit, ModerationAudit, Video
+from ..models import LoginAudit, ModerationAudit, User, Video
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -28,6 +28,25 @@ def dashboard():
     pagination = query.paginate(page=page, per_page=25, error_out=False)
     logins = LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(200).all()
     return render_template("admin_dashboard.html", videos=pagination.items, pagination=pagination, logins=logins)
+
+
+@admin_bp.get("/audit.csv")
+def audit_csv():
+    from flask import Response
+    rows = ["timestamp,type,username,action,success,ip,details"]
+    for item in LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(5000):
+        rows.append(f"{item.created_at},login,{item.username_input},, {item.success},{item.ip_address},{item.user_agent}")
+    for item in ModerationAudit.query.order_by(ModerationAudit.created_at.desc()).limit(5000):
+        rows.append(f"{item.created_at},moderation,,{item.action},,,{item.reason}")
+    return Response("\n".join(rows), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=audit.csv"})
+
+
+@admin_bp.post("/users/<int:user_id>/toggle-upload")
+def toggle_upload(user_id):
+    user = User.query.get_or_404(user_id)
+    user.upload_disabled = not user.upload_disabled
+    db.session.commit()
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.post("/delete/<int:video_id>")

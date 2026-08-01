@@ -56,7 +56,18 @@ def login():
             return render_template("login.html", form=form), 429
         ident = form.username_or_email.data.strip()
         user = User.query.filter((User.username == ident) | (User.email == ident.lower())).first()
+        if user and user.locked_until and user.locked_until > utcnow():
+            flash("账号暂时锁定，请稍后再试。", "warning")
+            return render_template("login.html", form=form), 429
         success = bool(user and check_password_hash(user.password_hash, form.password.data))
+        if user and not success:
+            user.login_failed_count += 1
+            if user.login_failed_count >= current_app.config["MAX_LOGIN_FAILURES"]:
+                user.locked_until = utcnow() + timedelta(seconds=current_app.config["LOGIN_LOCK_SECONDS"])
+                user.login_failed_count = 0
+        elif user and success:
+            user.login_failed_count = 0
+            user.locked_until = None
         audit = LoginAudit(
             username_input=ident[:120], user_id=user.id if success else None, success=success,
             ip_address=(request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip())[:64],

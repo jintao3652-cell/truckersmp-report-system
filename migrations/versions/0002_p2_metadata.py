@@ -13,6 +13,9 @@ depends_on = None
 
 
 def upgrade():
+    op.add_column("user", sa.Column("login_failed_count", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column("user", sa.Column("locked_until", sa.DateTime()))
+    op.add_column("user", sa.Column("upload_disabled", sa.Boolean(), nullable=False, server_default=sa.false()))
     op.add_column("video", sa.Column("rejection_reason", sa.Text(), nullable=False, server_default=""))
     op.create_table(
         "moderation_audit",
@@ -30,3 +33,6 @@ def downgrade():
     op.drop_index("ix_moderation_audit_created_at", table_name="moderation_audit")
     op.drop_table("moderation_audit")
     op.drop_column("video", "rejection_reason")
+    op.drop_column("user", "upload_disabled")
+    op.drop_column("user", "locked_until")
+    op.drop_column("user", "login_failed_count")
