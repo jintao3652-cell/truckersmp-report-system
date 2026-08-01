@@ -26,8 +26,8 @@ class Config:
     STORAGE_S3_PREFIX = os.getenv("STORAGE_S3_PREFIX", "videos")
     STORAGE_S3_PUBLIC_BASE = os.getenv("STORAGE_S3_PUBLIC_BASE", "")
     STORAGE_SIGNED_URL_SECONDS = int(os.getenv("STORAGE_SIGNED_URL_SECONDS", "900"))
-    REQUIRE_REAL_MIME = os.getenv("REQUIRE_REAL_MIME", "0") == "1"
-    MEDIA_PROCESSING_ASYNC = os.getenv("MEDIA_PROCESSING_ASYNC", "0") == "1"
+    REQUIRE_REAL_MIME = os.getenv("REQUIRE_REAL_MIME", "1" if ENVIRONMENT == "production" else "0") == "1"
+    MEDIA_PROCESSING_ASYNC = os.getenv("MEDIA_PROCESSING_ASYNC", "1" if ENVIRONMENT == "production" else "0") == "1"
     MEDIA_JOB_MAX_ATTEMPTS = int(os.getenv("MEDIA_JOB_MAX_ATTEMPTS", "3"))
     RETENTION_POLICY = os.getenv("RETENTION_POLICY", "365")
     DISK_ALERT_THRESHOLD = int(os.getenv("DISK_ALERT_THRESHOLD", "90"))
@@ -45,6 +45,8 @@ class Config:
     METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
     if ENVIRONMENT == "production" and METRICS_REQUIRE_AUTH and not METRICS_TOKEN:
         raise RuntimeError("METRICS_TOKEN must be set when metrics authentication is enabled")
+    if ENVIRONMENT == "production" and STORAGE_BACKEND == "s3" and not STORAGE_S3_BUCKET:
+        raise RuntimeError("STORAGE_S3_BUCKET must be set when STORAGE_BACKEND=s3")
     REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "1" if ENVIRONMENT == "production" else "0") == "1"
     MEDIA_ACCEL_REDIRECT = os.getenv("MEDIA_ACCEL_REDIRECT", "1") == "1"
     AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "0" if ENVIRONMENT == "production" else "1") == "1"

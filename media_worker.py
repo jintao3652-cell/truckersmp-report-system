@@ -39,9 +39,10 @@ with app.app_context():
             job.error = str(exc)[:2000]
             if job.status == "failed":
                 job.video.status = "rejected"
+                job.video.file_size = 0
                 job.video.rejection_reason = "媒体校验失败，文件不是有效视频或处理失败。"
                 previous = ModerationAudit.query.order_by(ModerationAudit.id.desc()).first()
-                audit = ModerationAudit(video_id=job.video.id, admin_id=job.video.uploader_id, action="reject", reason=job.video.rejection_reason, source="worker", video_title=job.video.title, previous_hash=previous.record_hash if previous else None, created_at=utcnow())
+                audit = ModerationAudit(video_id=job.video.id, admin_id=None, action="reject", reason=job.video.rejection_reason, source="worker", video_title=job.video.title, previous_hash=previous.record_hash if previous else None, created_at=utcnow())
                 audit.record_hash = audit_hash(audit.previous_hash, audit)
                 db.session.add(audit)
                 try:
@@ -56,5 +57,7 @@ with app.app_context():
                 except Exception:
                     app.logger.exception("Failed to remove invalid media for video %s", job.video_id)
             app.logger.exception("Media job %s failed", job.id)
+            if temp_source and os.path.exists(temp_source):
+                os.unlink(temp_source)
         job.updated_at = utcnow()
         db.session.commit()
