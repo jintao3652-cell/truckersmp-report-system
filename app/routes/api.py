@@ -92,7 +92,7 @@ def reject_video(video_id):
     if not user or (not user.is_admin and user.role not in {"admin", "moderator"}) or not has_scope(user, "moderate"):
         return jsonify({"error": "admin_required"}), 403
     video = Video.query.get_or_404(video_id)
-    reason = str((request.get_json(silent=True) or {}).get("reason", "")).strip()[:5000] or "绠＄悊鍛樺鏍告嫆缁?
+    reason = str((request.get_json(silent=True) or {}).get("reason", "")).strip()[:5000] or "管理员审核拒绝"
     video.status = "rejected"
     video.rejection_reason = reason
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="reject", reason=reason, source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
