@@ -39,7 +39,8 @@ def has_scope(user, scope):
     if not user:
         return False
     if current_user.is_authenticated:
-        return (scope == "read") or (user.role == "admin" and scope in {"moderate", "delete"}) or (user.role == "moderator" and scope == "moderate")
+        effective_admin = user.is_admin or user.role == "admin"
+        return (scope == "read") or (effective_admin and scope in {"moderate", "delete"}) or (not effective_admin and user.role == "moderator" and scope == "moderate")
     return scope in token_scopes()
 
 
@@ -148,6 +149,11 @@ def init_upload():
         return jsonify({"error": "invalid_filename_or_size"}), 400
     if not valid_report_id(str(payload.get("report_id", "api"))):
         return jsonify({"error": "invalid_report_id"}), 400
+    resume_id = str(payload.get("resume_id", "")).strip()
+    if resume_id:
+        existing = UploadSession.query.filter_by(id=resume_id, user_id=user.id, filename=filename[:255], expected_size=size, status="active").first()
+        if existing:
+            return jsonify({"id": existing.id, "received_size": existing.received_size, "resumed": True}), 200
     if user.upload_disabled:
         return jsonify({"error": "upload_disabled"}), 403
     usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=user.id).scalar()
@@ -166,7 +172,7 @@ def init_upload():
 @api_bp.put("/uploads/<session_id>")
 def upload_chunk(session_id):
     user = request_user()
-    session = UploadSession.query.get_or_404(session_id)
+    session = db.session.query(UploadSession).with_for_update().filter_by(id=session_id).first_or_404()
     if session.updated_at + timedelta(seconds=current_app.config["UPLOAD_SESSION_EXPIRES_SECONDS"]) < utcnow():
         session.status = "expired"
         db.session.commit()

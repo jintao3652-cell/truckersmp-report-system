@@ -36,6 +36,20 @@ with app.app_context():
         except Exception as exc:
             job.status = "failed" if job.attempts >= app.config["MEDIA_JOB_MAX_ATTEMPTS"] else "pending"
             job.error = str(exc)[:2000]
+            if job.status == "failed":
+                job.video.status = "rejected"
+                job.video.rejection_reason = "媒体校验失败，文件不是有效视频或处理失败。"
+                try:
+                    if app.config.get("STORAGE_BACKEND") == "s3":
+                        storage.delete(job.video.file_path)
+                        if job.video.thumbnail_path:
+                            storage.delete(job.video.thumbnail_path)
+                    else:
+                        for path in (job.video.file_path, job.video.thumbnail_path):
+                            if path and os.path.exists(path):
+                                os.unlink(path)
+                except Exception:
+                    app.logger.exception("Failed to remove invalid media for video %s", job.video_id)
             app.logger.exception("Media job %s failed", job.id)
         job.updated_at = utcnow()
         db.session.commit()

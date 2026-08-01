@@ -173,7 +173,6 @@ def shared_detail(share_code):
     video = Video.query.filter_by(share_code=share_code, status="approved", share_enabled=True).first_or_404()
     if video.expire_time < utcnow() or (video.share_expires_at and video.share_expires_at < utcnow()):
         abort(404)
-    notify_share_view(current_app, video, request.remote_addr)
     mime_type = guess_type(video.original_filename)[0] or "application/octet-stream"
     return render_template("video_detail.html", video=video, file_url=url_for("video.shared_media", share_code=share_code), mime_type=mime_type, shared=True)
 

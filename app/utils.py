@@ -147,16 +147,16 @@ def notify_share_view(app, video, viewer_ip=None):
     if not video.uploader or not video.uploader.email:
         return False
     now = utcnow()
-    notice = ShareViewNotice.query.filter_by(video_id=video.id).first()
+    notice = ShareViewNotice.query.filter_by(video_id=video.id).with_for_update().first()
     if not notice:
         notice = ShareViewNotice(video_id=video.id, view_count=0)
         db.session.add(notice)
         db.session.flush()
-    notice.view_count += 1
     cooldown = app.config.get("SHARE_VIEW_NOTIFY_COOLDOWN_SECONDS", 3600)
     if notice.last_notified_at and (now - notice.last_notified_at).total_seconds() < cooldown:
         db.session.commit()
         return False
+    notice.view_count += 1
     notice.last_notified_at = now
     db.session.commit()
     try:

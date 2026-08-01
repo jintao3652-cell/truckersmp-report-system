@@ -30,6 +30,13 @@ def guard_admin():
         return redirect(url_for("main.index"))
 
 
+def require_full_admin():
+    if not current_user.is_admin and current_user.role != "admin":
+        flash("此操作需要全权管理员权限。", "danger")
+        return redirect(url_for("admin.dashboard"))
+    return None
+
+
 @admin_bp.route("/")
 def dashboard():
     status = request.args.get("status", "")
@@ -61,6 +68,9 @@ def users_page():
 
 @admin_bp.post("/users/<int:user_id>/tokens")
 def create_token(user_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     import hashlib, secrets
     user = User.query.get_or_404(user_id)
     raw = secrets.token_urlsafe(32)
@@ -77,6 +87,9 @@ def create_token(user_id):
 
 @admin_bp.post("/users/<int:user_id>/quota")
 def update_quota(user_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     user = User.query.get_or_404(user_id)
     raw = request.form.get("quota_bytes", "").strip()
     try:
@@ -138,6 +151,9 @@ def audit_csv():
 
 @admin_bp.post("/users/<int:user_id>/toggle-upload")
 def toggle_upload(user_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     user = User.query.get_or_404(user_id)
     user.upload_disabled = not user.upload_disabled
     db.session.commit()
@@ -147,6 +163,9 @@ def toggle_upload(user_id):
 
 @admin_bp.post("/users/<int:user_id>/unlock")
 def unlock_user(user_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     user = User.query.get_or_404(user_id)
     user.locked_until = None
     user.login_failed_count = 0
@@ -157,6 +176,9 @@ def unlock_user(user_id):
 
 @admin_bp.post("/delete/<int:video_id>")
 def delete(video_id):
+    denied = require_full_admin()
+    if denied:
+        return denied
     video = Video.query.get_or_404(video_id)
     file_errors = []
     if current_app.config.get("STORAGE_BACKEND") == "s3":

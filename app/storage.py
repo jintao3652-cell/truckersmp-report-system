@@ -29,6 +29,8 @@ class S3Storage:
         self.client = boto3.client("s3", endpoint_url=endpoint or None, region_name=region or None)
 
     def _key(self, key):
+        if self.prefix and str(key).strip("/").startswith(self.prefix + "/"):
+            return str(key).strip("/")
         return f"{self.prefix}/{key}" if self.prefix else key
 
     def put(self, source_path, key):

@@ -43,6 +43,8 @@ class Config:
     SHARE_RATE_LIMIT_BLOCK_SECONDS = int(os.getenv("SHARE_RATE_LIMIT_BLOCK_SECONDS", "3600"))
     METRICS_REQUIRE_AUTH = os.getenv("METRICS_REQUIRE_AUTH", "1" if ENVIRONMENT == "production" else "0") == "1"
     METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
+    if ENVIRONMENT == "production" and METRICS_REQUIRE_AUTH and not METRICS_TOKEN:
+        raise RuntimeError("METRICS_TOKEN must be set when metrics authentication is enabled")
     REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "1" if ENVIRONMENT == "production" else "0") == "1"
     MEDIA_ACCEL_REDIRECT = os.getenv("MEDIA_ACCEL_REDIRECT", "1") == "1"
     AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "0" if ENVIRONMENT == "production" else "1") == "1"
