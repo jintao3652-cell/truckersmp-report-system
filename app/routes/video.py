@@ -43,8 +43,6 @@ def upload():
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
-    usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
-    return render_template("upload.html", form=form, used_bytes=usage, quota_bytes=current_app.config["MAX_USER_STORAGE_BYTES"])
         stored_name = make_storage_name(file.filename)
         upload_dir = ensure_dir(current_app.config["UPLOAD_FOLDER"])
         temp_path = os.path.join(upload_dir, stored_name)
