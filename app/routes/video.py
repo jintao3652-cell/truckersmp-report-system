@@ -48,7 +48,6 @@ def upload():
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
-            usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
             return _upload_page(form, 400)
         if current_user.upload_disabled:
             flash("当前账号已被禁止上传。", "danger")
