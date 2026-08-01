@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from .. import db
@@ -31,13 +31,18 @@ def dashboard():
 @admin_bp.post("/delete/<int:video_id>")
 def delete(video_id):
     video = Video.query.get_or_404(video_id)
+    file_errors = []
     for path in (video.file_path, video.thumbnail_path):
         if path and os.path.exists(path):
-            os.remove(path)
+            try:
+                os.remove(path)
+            except OSError as exc:
+                current_app.logger.exception("Failed to remove video file %s", path)
+                file_errors.append(str(exc))
     db.session.delete(video)
     db.session.commit()
     flash("视频及其文件已删除。", "success")
-    return redirect(url_for("admin.dashboard"))
+    return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
 
 
 @admin_bp.post("/approve/<int:video_id>")

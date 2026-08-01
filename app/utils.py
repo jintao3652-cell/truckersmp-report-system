@@ -67,7 +67,9 @@ def check_rate_limit(app, action, ip_address):
     now = utcnow()
     digest = hashlib.sha256(f"{app.config['SECRET_KEY']}:{ip_address or 'unknown'}".encode()).hexdigest()
     event = RateLimitEvent.query.filter_by(action=action, key_hash=digest).first()
-    window = app.config["RATE_LIMIT_WINDOW_SECONDS"]
+    prefix = "UPLOAD_RATE_LIMIT_" if action == "upload" else "RATE_LIMIT_"
+    window = app.config[f"{prefix}WINDOW_SECONDS"]
+    max_attempts = app.config[f"{prefix}MAX_ATTEMPTS"]
     if not event or (now - event.window_started_at).total_seconds() >= window:
         if not event:
             event = RateLimitEvent(action=action, key_hash=digest, window_started_at=now, attempts=0)
@@ -78,7 +80,7 @@ def check_rate_limit(app, action, ip_address):
         db.session.commit()
         return False, max(1, int((event.blocked_until - now).total_seconds()))
     event.attempts += 1
-    if event.attempts > app.config["RATE_LIMIT_MAX_ATTEMPTS"]:
+    if event.attempts > max_attempts:
         event.blocked_until = now + timedelta(seconds=app.config["RATE_LIMIT_BLOCK_SECONDS"])
         db.session.commit()
         return False, app.config["RATE_LIMIT_BLOCK_SECONDS"]

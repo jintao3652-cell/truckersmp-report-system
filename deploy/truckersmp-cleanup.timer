@@ -1,0 +1,10 @@
+[Unit]
+Description=Run TruckersMP expired video cleanup daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=truckersmp-cleanup.service
+
+[Install]
+WantedBy=timers.target
