@@ -57,11 +57,13 @@ def create_app(config_class=Config):
     from .routes.main import main_bp
     from .routes.video import video_bp
     from .routes.admin import admin_bp
+    from .routes.api import api_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(video_bp, url_prefix="/videos")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(api_bp)
 
     if app.config["AUTO_CREATE_DB"]:
         with app.app_context():

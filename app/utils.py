@@ -64,6 +64,11 @@ def probe_video(path, ffprobe_path):
     return int(float(streams[0].get("duration") or 0))
 
 
+def make_thumbnail(video_path, thumbnail_path, ffmpeg_path="ffmpeg"):
+    result = subprocess.run([ffmpeg_path, "-y", "-ss", "00:00:01", "-i", video_path, "-frames:v", "1", "-vf", "scale=640:-1", thumbnail_path], capture_output=True, timeout=60, check=False)
+    return result.returncode == 0 and os.path.exists(thumbnail_path)
+
+
 def send_email(app, recipient, subject, body):
     host, port, use_tls = app.config["MAIL_PRESETS"].get(app.config["MAIL_PROVIDER"], app.config["MAIL_PRESETS"]["custom"])
     if not host or not app.config["MAIL_USERNAME"] or not app.config["MAIL_PASSWORD"]:

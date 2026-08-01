@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from .. import db
 from ..forms import UploadForm
 from ..models import Video
-from ..utils import allowed_file, check_rate_limit, check_user_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, probe_video, utcnow
+from ..utils import allowed_file, check_rate_limit, check_user_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, make_thumbnail, probe_video, utcnow
 
 video_bp = Blueprint("video", __name__)
 
@@ -72,6 +72,9 @@ def upload():
             final_dir = ensure_dir(dated_storage_dir(current_app.config["VIDEO_FOLDER"], utcnow()))
             final_path = os.path.join(final_dir, stored_name)
             os.replace(temp_path, final_path)
+            thumbnail_path = os.path.join(final_dir, f"{os.path.splitext(stored_name)[0]}.jpg")
+            if not make_thumbnail(final_path, thumbnail_path, current_app.config["FFMPEG_PATH"]):
+                thumbnail_path = ""
 
             video = Video(
                 report_id=form.report_id.data.strip(),
@@ -80,11 +83,12 @@ def upload():
                 original_filename=file.filename,
                 stored_filename=stored_name,
                 file_path=final_path,
+                thumbnail_path=thumbnail_path,
                 file_size=os.path.getsize(final_path),
                 duration=duration or 0,
                 uploader_id=current_user.id,
                 uploaded_at=utcnow(),
-                expire_time=utcnow() + timedelta(days=365),
+                expire_time=utcnow() + timedelta(days=current_app.config["RETENTION_DAYS"]),
             )
             db.session.add(video)
             db.session.commit()
@@ -141,6 +145,16 @@ def media(video_id):
         relative_path = os.path.relpath(real_path, base).replace(os.sep, "/")
         return Response(status=200, headers={"X-Accel-Redirect": f"/protected-videos/{relative_path}", "Content-Type": guess_type(video.original_filename)[0] or "application/octet-stream", "Content-Disposition": "inline"})
     return send_file(video.file_path, as_attachment=False, conditional=True)
+
+
+@video_bp.route("/<int:video_id>/thumbnail")
+def thumbnail(video_id):
+    video = Video.query.get_or_404(video_id)
+    if not current_user.is_authenticated or (not current_user.is_admin and video.uploader_id != current_user.id):
+        abort(404)
+    if not video.thumbnail_path or not os.path.exists(video.thumbnail_path):
+        abort(404)
+    return send_file(video.thumbnail_path, mimetype="image/jpeg")
 
 
 class QuotaExceeded(Exception):

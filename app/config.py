@@ -18,6 +18,7 @@ class Config:
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 2 * 1024 * 1024 * 1024))
     MAX_USER_STORAGE_BYTES = int(os.getenv("MAX_USER_STORAGE_BYTES", 20 * 1024 * 1024 * 1024))
     FFPROBE_PATH = os.getenv("FFPROBE_PATH", shutil.which("ffprobe") or "")
+    FFMPEG_PATH = os.getenv("FFMPEG_PATH", shutil.which("ffmpeg") or "ffmpeg")
     REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "0") == "1"
     MEDIA_ACCEL_REDIRECT = os.getenv("MEDIA_ACCEL_REDIRECT", "1") == "1"
     AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "1") == "1"
