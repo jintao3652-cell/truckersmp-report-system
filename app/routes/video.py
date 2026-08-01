@@ -74,14 +74,16 @@ def upload():
             quota = current_user.quota_bytes or current_app.config["MAX_USER_STORAGE_BYTES"]
             if current_usage + file_size > quota:
                 raise QuotaExceeded
-            duration = probe_video(temp_path, current_app.config["FFPROBE_PATH"])
-            if duration is None and current_app.config["REQUIRE_FFPROBE"]:
+            duration = None if current_app.config.get("MEDIA_PROCESSING_ASYNC") else probe_video(temp_path, current_app.config["FFPROBE_PATH"])
+            if duration is None and current_app.config["REQUIRE_FFPROBE"] and not current_app.config.get("MEDIA_PROCESSING_ASYNC"):
                 raise ValueError("ffprobe is required for video validation")
             final_dir = ensure_dir(dated_storage_dir(current_app.config["VIDEO_FOLDER"], utcnow()))
             final_path = os.path.join(final_dir, stored_name)
             os.replace(temp_path, final_path)
             thumbnail_path = os.path.join(final_dir, f"{os.path.splitext(stored_name)[0]}.jpg")
-            if not make_thumbnail(final_path, thumbnail_path, current_app.config["FFMPEG_PATH"]):
+            if current_app.config.get("MEDIA_PROCESSING_ASYNC"):
+                thumbnail_path = ""
+            elif not make_thumbnail(final_path, thumbnail_path, current_app.config["FFMPEG_PATH"]):
                 thumbnail_path = ""
 
             file_ref, thumbnail_ref = final_path, thumbnail_path
@@ -168,7 +170,9 @@ def shared_detail(share_code):
     allowed, _ = check_rate_limit(current_app, "share", request.remote_addr)
     if not allowed:
         abort(429)
-    video = Video.query.filter_by(share_code=share_code, status="approved").first_or_404()
+    video = Video.query.filter_by(share_code=share_code, status="approved", share_enabled=True).first_or_404()
+    if video.expire_time < utcnow() or (video.share_expires_at and video.share_expires_at < utcnow()):
+        abort(404)
     mime_type = guess_type(video.original_filename)[0] or "application/octet-stream"
     return render_template("video_detail.html", video=video, file_url=url_for("video.shared_media", share_code=share_code), mime_type=mime_type, shared=True)
 
@@ -202,7 +206,9 @@ def shared_media(share_code):
     allowed, _ = check_rate_limit(current_app, "share", request.remote_addr)
     if not allowed:
         abort(429)
-    video = Video.query.filter_by(share_code=share_code, status="approved").first_or_404()
+    video = Video.query.filter_by(share_code=share_code, status="approved", share_enabled=True).first_or_404()
+    if video.expire_time < utcnow() or (video.share_expires_at and video.share_expires_at < utcnow()):
+        abort(404)
     if current_app.config.get("STORAGE_BACKEND") == "s3":
         storage = get_storage(current_app.config)
         if not storage.exists(video.file_path):

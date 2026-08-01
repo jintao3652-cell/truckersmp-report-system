@@ -39,6 +39,9 @@ class Config:
     UPLOAD_CHUNK_MAX_BYTES = int(os.getenv("UPLOAD_CHUNK_MAX_BYTES", str(16 * 1024 * 1024)))
     SHARE_RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("SHARE_RATE_LIMIT_MAX_ATTEMPTS", "120"))
     SHARE_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("SHARE_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+    SHARE_RATE_LIMIT_BLOCK_SECONDS = int(os.getenv("SHARE_RATE_LIMIT_BLOCK_SECONDS", "3600"))
+    METRICS_REQUIRE_AUTH = os.getenv("METRICS_REQUIRE_AUTH", "1" if ENVIRONMENT == "production" else "0") == "1"
+    METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
     REQUIRE_FFPROBE = os.getenv("REQUIRE_FFPROBE", "1" if ENVIRONMENT == "production" else "0") == "1"
     MEDIA_ACCEL_REDIRECT = os.getenv("MEDIA_ACCEL_REDIRECT", "1") == "1"
     AUTO_CREATE_DB = os.getenv("AUTO_CREATE_DB", "0" if ENVIRONMENT == "production" else "1") == "1"

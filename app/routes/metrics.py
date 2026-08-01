@@ -1,5 +1,5 @@
 import shutil
-from flask import Blueprint, Response, current_app
+from flask import Blueprint, Response, current_app, request
 from sqlalchemy import func
 from .. import db
 from ..models import LoginAudit, Video
@@ -8,6 +8,8 @@ metrics_bp = Blueprint("metrics", __name__)
 
 @metrics_bp.get("/metrics")
 def metrics():
+    if current_app.config.get("METRICS_REQUIRE_AUTH") and request.headers.get("X-Metrics-Token") != current_app.config.get("METRICS_TOKEN"):
+        return Response("unauthorized\n", status=401)
     videos = Video.query.count()
     pending = Video.query.filter_by(status="pending").count()
     bytes_used = db.session.query(func.coalesce(func.sum(Video.file_size), 0)).scalar()

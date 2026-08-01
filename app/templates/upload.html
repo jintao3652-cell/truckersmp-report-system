@@ -19,6 +19,8 @@
   {{ form.submit(class="btn btn-primary") }}
 </form>
 <progress id="upload-progress" class="w-100 d-none" max="100" value="0"></progress>
+<button type="button" id="chunk-upload-button" class="btn btn-outline-secondary mt-2">使用分片上传</button>
 <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chunk_upload.js') }}"></script>
+<script>document.querySelector('#chunk-upload-button')?.addEventListener('click', async () => { const file = document.querySelector('#video-file-input')?.files?.[0]; if (!file) return alert('请先选择视频文件'); try { const result = await startChunkUpload(file, {report_id: document.querySelector('[name=report_id]').value, title: document.querySelector('[name=title]').value, description: document.querySelector('[name=description]').value}); window.location.href = `/videos/${result.id}`; } catch (error) { alert(error.message); } });</script>
 {% endblock %}

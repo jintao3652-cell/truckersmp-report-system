@@ -103,6 +103,15 @@ def regenerate_share(video_id):
     flash("分享码已重新生成，旧链接已失效。", "success")
     return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
 
+@admin_bp.post("/videos/<int:video_id>/toggle-share")
+def toggle_share(video_id):
+    video = Video.query.get_or_404(video_id)
+    video.share_enabled = not video.share_enabled
+    db.session.add(audit_context(video, "share_enable" if video.share_enabled else "share_revoke", "Share availability changed"))
+    db.session.commit()
+    flash("分享已启用。" if video.share_enabled else "分享已撤销。", "success")
+    return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
+
 
 @admin_bp.post("/tokens/<int:token_id>/revoke")
 def revoke_token(token_id):

@@ -164,7 +164,7 @@ def check_rate_limit(app, action, ip_address):
     prefix = "UPLOAD_RATE_LIMIT_" if action == "upload" else ("SHARE_RATE_LIMIT_" if action == "share" else "RATE_LIMIT_")
     window = app.config[f"{prefix}WINDOW_SECONDS"]
     max_attempts = app.config[f"{prefix}MAX_ATTEMPTS"]
-    block_seconds = app.config[f"{prefix}BLOCK_SECONDS"]
+    block_seconds = app.config.get(f"{prefix}BLOCK_SECONDS", app.config["RATE_LIMIT_BLOCK_SECONDS"])
     if not event or (now - event.window_started_at).total_seconds() >= window:
         if not event:
             event = RateLimitEvent(action=action, key_hash=digest, window_started_at=now, attempts=0)

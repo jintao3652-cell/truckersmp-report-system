@@ -136,6 +136,8 @@ class Video(db.Model):
     )
     uploader_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     share_code = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    share_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    share_expires_at = db.Column(db.DateTime)
 
 
 @login_manager.user_loader

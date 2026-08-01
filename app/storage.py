@@ -49,6 +49,13 @@ class S3Storage:
     def signed_url(self, key, expires=900):
         return self.client.generate_presigned_url("get_object", Params={"Bucket": self.bucket, "Key": self._key(key)}, ExpiresIn=expires)
 
+    def download(self, key, target):
+        self.client.download_file(self.bucket, self._key(key), str(target))
+
+    def upload_key(self, source_path, key):
+        self.client.upload_file(str(source_path), self.bucket, self._key(key))
+        return self._key(key)
+
 
 def get_storage(config):
     if config.get("STORAGE_BACKEND") == "s3":

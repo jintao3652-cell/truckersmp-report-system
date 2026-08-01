@@ -6,7 +6,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required
 from .. import db
-from ..models import ApiToken, ModerationAudit, UploadSession, User, Video
+from ..models import ApiToken, MediaJob, ModerationAudit, UploadSession, User, Video
 from ..storage import get_storage
 from ..utils import allowed_file, dated_storage_dir, ensure_dir, make_share_code, make_thumbnail, prepare_audit, probe_video, real_video_mime, retention_days, send_notification, utcnow, valid_report_id
 
@@ -36,7 +36,11 @@ def token_scopes():
 
 
 def has_scope(user, scope):
-    return user and (current_user.is_authenticated or scope in token_scopes())
+    if not user:
+        return False
+    if current_user.is_authenticated:
+        return (scope == "read") or (user.role == "admin" and scope in {"moderate", "delete"}) or (user.role == "moderator" and scope == "moderate")
+    return scope in token_scopes()
 
 
 def request_user():
@@ -210,14 +214,14 @@ def complete_upload(session_id):
     if usage + actual_size > quota:
         return jsonify({"error": "quota_exceeded"}), 413
     try:
-        duration = probe_video(session.temp_path, current_app.config["FFPROBE_PATH"])
+        duration = None if current_app.config.get("MEDIA_PROCESSING_ASYNC") else probe_video(session.temp_path, current_app.config["FFPROBE_PATH"])
     except (OSError, ValueError):
         session.status = "failed"
         db.session.commit()
         if os.path.exists(session.temp_path):
             os.remove(session.temp_path)
         return jsonify({"error": "invalid_video"}), 400
-    if duration is None and current_app.config["REQUIRE_FFPROBE"]:
+    if duration is None and current_app.config["REQUIRE_FFPROBE"] and not current_app.config.get("MEDIA_PROCESSING_ASYNC"):
         session.status = "failed"
         db.session.commit()
         if os.path.exists(session.temp_path):
@@ -229,7 +233,9 @@ def complete_upload(session_id):
     thumbnail_path = os.path.join(final_dir, f"{os.path.splitext(stored_name)[0]}.jpg")
     try:
         os.replace(session.temp_path, final_path)
-        if not make_thumbnail(final_path, thumbnail_path, current_app.config["FFMPEG_PATH"]):
+        if current_app.config.get("MEDIA_PROCESSING_ASYNC"):
+            thumbnail_path = ""
+        elif not make_thumbnail(final_path, thumbnail_path, current_app.config["FFMPEG_PATH"]):
             thumbnail_path = ""
         file_ref, thumbnail_ref = final_path, thumbnail_path
         if current_app.config.get("STORAGE_BACKEND") == "s3":
@@ -242,6 +248,8 @@ def complete_upload(session_id):
                 thumbnail_ref = ""
         video = Video(report_id=session.report_id, title=session.title or session.filename, description=session.description, original_filename=session.filename, stored_filename=stored_name, file_path=file_ref, thumbnail_path=thumbnail_ref, file_size=actual_size, duration=duration or 0, uploader_id=session.user_id, uploaded_at=utcnow(), expire_time=utcnow() + timedelta(days=retention_days(current_app)), share_code=make_share_code())
         db.session.add(video)
+        if current_app.config.get("MEDIA_PROCESSING_ASYNC"):
+            db.session.add(MediaJob(video_id=video.id, job_type="probe_thumbnail"))
         session.status = "completed"
         db.session.commit()
     except Exception:
