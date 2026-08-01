@@ -2,7 +2,7 @@ from flask import Blueprint, flash, redirect, render_template, url_for
 from flask_login import current_user
 
 from .. import db
-from ..models import Video
+from ..models import LoginAudit, Video
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -19,7 +19,8 @@ def guard_admin():
 @admin_bp.route("/")
 def dashboard():
     videos = Video.query.order_by(Video.uploaded_at.desc()).limit(100).all()
-    return render_template("admin_dashboard.html", videos=videos)
+    logins = LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(200).all()
+    return render_template("admin_dashboard.html", videos=videos, logins=logins)
 
 
 @admin_bp.post("/approve/<int:video_id>")

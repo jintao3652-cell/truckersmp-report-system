@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from .. import db
 from ..forms import LoginForm, RegistrationForm, RequestResetForm, ResetPasswordForm
-from ..models import PasswordResetToken, User
+from ..models import LoginAudit, PasswordResetToken, User
 from ..utils import check_rate_limit, send_email, utcnow
 
 auth_bp = Blueprint("auth", __name__)
@@ -56,7 +56,16 @@ def login():
             return render_template("login.html", form=form), 429
         ident = form.username_or_email.data.strip()
         user = User.query.filter((User.username == ident) | (User.email == ident.lower())).first()
-        if user and check_password_hash(user.password_hash, form.password.data):
+        success = bool(user and check_password_hash(user.password_hash, form.password.data))
+        audit = LoginAudit(
+            username_input=ident[:120], user_id=user.id if success else None, success=success,
+            ip_address=(request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip())[:64],
+            user_agent=request.user_agent.string[:500], accept_language=request.headers.get("Accept-Language", "")[:255],
+            referrer=request.referrer or "", device_type=_device_type(request.user_agent.string),
+        )
+        db.session.add(audit)
+        db.session.commit()
+        if success:
             login_user(user, remember=form.remember.data)
             next_page = request.args.get("next")
             if next_page:
@@ -66,6 +75,17 @@ def login():
             return redirect(next_page or url_for("main.index"))
         flash("用户名、邮箱或密码不正确。", "danger")
     return render_template("login.html", form=form)
+
+
+def _device_type(user_agent):
+    value = (user_agent or "").lower()
+    if "bot" in value or "spider" in value:
+        return "bot"
+    if "mobile" in value or "android" in value or "iphone" in value:
+        return "mobile"
+    if value:
+        return "desktop"
+    return "unknown"
 
 
 @auth_bp.route("/reset-password", methods=["GET", "POST"])

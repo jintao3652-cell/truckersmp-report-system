@@ -19,4 +19,8 @@
     <div class="text-muted">暂无待处理项目。</div>
   {% endfor %}
 </div>
+<h2 class="h5 mt-4">登录记录</h2>
+<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>时间</th><th>账号</th><th>结果</th><th>IP</th><th>设备</th><th>User-Agent / 语言 / 来源</th></tr></thead><tbody>
+{% for item in logins %}<tr><td>{{ item.created_at }}</td><td>{{ item.user.username if item.user else item.username_input }}</td><td>{% if item.success %}<span class="text-success">成功</span>{% else %}<span class="text-danger">失败</span>{% endif %}</td><td>{{ item.ip_address }}</td><td>{{ item.device_type }}</td><td><small>{{ item.user_agent }}<br>{{ item.accept_language }}<br>{{ item.referrer or '-' }}</small></td></tr>{% else %}<tr><td colspan="6">暂无登录记录</td></tr>{% endfor %}
+</tbody></table></div>
 {% endblock %}

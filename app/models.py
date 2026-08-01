@@ -36,6 +36,20 @@ class RateLimitEvent(db.Model):
     __table_args__ = (db.UniqueConstraint("action", "key_hash", name="uq_rate_limit_action_key"),)
 
 
+class LoginAudit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username_input = db.Column(db.String(120), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    success = db.Column(db.Boolean, nullable=False)
+    ip_address = db.Column(db.String(64), nullable=False)
+    user_agent = db.Column(db.String(500), default="", nullable=False)
+    accept_language = db.Column(db.String(255), default="", nullable=False)
+    referrer = db.Column(db.String(500), default="", nullable=False)
+    device_type = db.Column(db.String(32), default="unknown", nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    user = db.relationship("User", backref="login_audits")
+
+
 class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     report_id = db.Column(db.String(64), index=True, nullable=False)
