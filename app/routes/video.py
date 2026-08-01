@@ -114,6 +114,7 @@ def upload():
             db.session.add(video)
             db.session.commit()
             if current_app.config.get("MEDIA_PROCESSING_ASYNC"):
+                db.session.flush()
                 db.session.add(MediaJob(video_id=video.id, job_type="probe_thumbnail"))
                 db.session.commit()
             send_notification(current_app, "新视频等待审核", f"视频 #{video.id}（{video.title}）已上传，等待管理员审核。")

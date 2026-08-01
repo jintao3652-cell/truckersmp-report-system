@@ -70,7 +70,7 @@ def video_detail(video_id):
     video = Video.query.get_or_404(video_id)
     if not user.is_admin and video.uploader_id != user.id:
         return jsonify({"error": "not_found"}), 404
-    return jsonify({"id": video.id, "title": video.title, "description": video.description, "status": video.status, "rejection_reason": video.rejection_reason, "report_id": video.report_id, "file_size": video.file_size, "duration": video.duration, "thumbnail_url": f"/videos/{video.id}/thumbnail", "media_url": f"/videos/media/{video.id}", "uploaded_at": video.uploaded_at.isoformat()})
+    return jsonify({"id": video.id, "title": video.title, "description": video.description, "status": video.status, "rejection_reason": video.rejection_reason, "report_id": video.report_id, "file_size": video.file_size, "duration": video.duration, "thumbnail_url": f"/videos/{video.id}/thumbnail", "media_url": f"/videos/media/{video.id}", "share_url": f"/videos/share/{video.share_code}" if video.status == "approved" and video.share_enabled else None, "uploaded_at": video.uploaded_at.isoformat()})
 
 
 @api_bp.post("/videos/<int:video_id>/approve")
@@ -215,11 +215,19 @@ def complete_upload(session_id):
     if actual_size != session.expected_size:
         return jsonify({"error": "size_mismatch", "actual_size": actual_size}), 400
     if current_app.config.get("REQUIRE_REAL_MIME") and not real_video_mime(session.temp_path):
+        session.status = "failed"
+        db.session.commit()
+        if os.path.exists(session.temp_path):
+            os.remove(session.temp_path)
         return jsonify({"error": "invalid_mime"}), 400
     usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=session.user_id).scalar()
     owner = db.session.get(User, session.user_id)
     quota = owner.quota_bytes or current_app.config["MAX_USER_STORAGE_BYTES"]
     if usage + actual_size > quota:
+        session.status = "failed"
+        db.session.commit()
+        if os.path.exists(session.temp_path):
+            os.remove(session.temp_path)
         return jsonify({"error": "quota_exceeded"}), 413
     try:
         duration = None if current_app.config.get("MEDIA_PROCESSING_ASYNC") else probe_video(session.temp_path, current_app.config["FFPROBE_PATH"])
@@ -257,6 +265,7 @@ def complete_upload(session_id):
         video = Video(report_id=session.report_id, title=session.title or session.filename, description=session.description, original_filename=session.filename, stored_filename=stored_name, file_path=file_ref, thumbnail_path=thumbnail_ref, file_size=actual_size, duration=duration or 0, uploader_id=session.user_id, uploaded_at=utcnow(), expire_time=utcnow() + timedelta(days=retention_days(current_app)), share_code=make_share_code())
         db.session.add(video)
         if current_app.config.get("MEDIA_PROCESSING_ASYNC"):
+            db.session.flush()
             db.session.add(MediaJob(video_id=video.id, job_type="probe_thumbnail"))
         session.status = "completed"
         db.session.commit()

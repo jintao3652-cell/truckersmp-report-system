@@ -19,7 +19,7 @@ async function uploadInChunks(file, token, metadata = {}, chunkSize = 8 * 1024 *
     }
     if (!response?.ok) throw new Error((await response?.json?.() || {}).error || "chunk upload failed");
     offset = (await response.json()).received_size;
-    localStorage.setItem(`upload:${session.id}`, String(offset));
+    localStorage.setItem(resumeKey, session.id);
     if (typeof window.onUploadProgress === "function") window.onUploadProgress(offset / file.size * 100);
   }
   const done = await fetch(`/api/v1/uploads/${session.id}/complete`, {method: "POST", headers: auth});

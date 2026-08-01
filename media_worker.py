@@ -10,7 +10,10 @@ from app.utils import audit_hash
 app = create_app()
 with app.app_context():
     jobs = MediaJob.query.filter_by(status="pending").order_by(MediaJob.created_at).limit(50).all()
-    for job in jobs:
+    for candidate in jobs:
+        job = db.session.query(MediaJob).with_for_update().filter_by(id=candidate.id, status="pending").first()
+        if not job:
+            continue
         job.status, job.attempts = "running", job.attempts + 1
         db.session.commit()
         try:
