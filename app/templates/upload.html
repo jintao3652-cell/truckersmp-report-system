@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="h4 mb-3">上传视频</h1>
-<div class="alert alert-info">已使用 {{ (used_bytes / 1024 / 1024 / 1024)|round(2) }} GiB / {{ (quota_bytes / 1024 / 1024 / 1024)|round(2) }} GiB</div>
+{% if used_bytes is defined %}<div class="alert alert-info">已使用 {{ (used_bytes / 1024 / 1024 / 1024)|round(2) }} GiB / {{ (quota_bytes / 1024 / 1024 / 1024)|round(2) }} GiB</div>{% endif %}
 <form method="post" enctype="multipart/form-data">
   {{ form.hidden_tag() }}
   <div class="mb-3">{{ form.report_id.label(class="form-label") }}{{ form.report_id(class="form-control") }}</div>
