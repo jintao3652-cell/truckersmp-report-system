@@ -16,6 +16,9 @@ class Config:
     VIDEO_FOLDER = os.getenv("VIDEO_FOLDER", "/sdk/truckersmp-videos")
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 2 * 1024 * 1024 * 1024))
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "0") == "1"
     MAIL_SERVER = os.getenv("MAIL_SERVER", "")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "1") == "1"
@@ -28,3 +31,5 @@ class Config:
     RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "900"))
     RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("RATE_LIMIT_MAX_ATTEMPTS", "10"))
     RATE_LIMIT_BLOCK_SECONDS = int(os.getenv("RATE_LIMIT_BLOCK_SECONDS", "900"))
+    UPLOAD_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("UPLOAD_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+    UPLOAD_RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("UPLOAD_RATE_LIMIT_MAX_ATTEMPTS", "10"))

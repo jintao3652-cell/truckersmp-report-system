@@ -3,7 +3,7 @@
 <h1 class="h4 mb-3">{{ video.title }}</h1>
 <p class="text-muted mb-2">举报ID: {{ video.report_id }} | 状态: {{ video.status }}</p>
 <video class="w-100 mb-3" controls preload="metadata">
-  <source src="{{ file_url }}" type="video/mp4">
+  <source src="{{ file_url }}" type="{{ mime_type }}">
 </video>
 <div class="border rounded p-3">
   <div><strong>原文件名：</strong>{{ video.original_filename }}</div>

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="h4 mb-3">管理后台</h1>
+<div class="btn-group mb-3"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">全部</a><a class="btn btn-sm btn-outline-warning" href="{{ url_for('admin.dashboard', status='pending') }}">待审核</a><a class="btn btn-sm btn-outline-success" href="{{ url_for('admin.dashboard', status='approved') }}">已通过</a><a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin.dashboard', status='rejected') }}">已拒绝</a></div>
 <div class="list-group">
   {% for video in videos %}
     <div class="list-group-item">
@@ -12,6 +13,7 @@
         <div class="btn-group">
           <form method="post" action="{{ url_for('admin.approve', video_id=video.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success" type="submit">通过</button></form>
           <form method="post" action="{{ url_for('admin.reject', video_id=video.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger" type="submit">拒绝</button></form>
+          <form method="post" action="{{ url_for('admin.delete', video_id=video.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger" type="submit">删除</button></form>
         </div>
       </div>
     </div>

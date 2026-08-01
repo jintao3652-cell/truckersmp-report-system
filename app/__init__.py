@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
 
@@ -18,6 +19,7 @@ login_manager.login_message_category = "warning"
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_object(config_class)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     if app.config["ENVIRONMENT"] == "production" and not app.config["SECRET_KEY"]:
         raise RuntimeError("SECRET_KEY must be set in production")
     if not app.config["SECRET_KEY"]:

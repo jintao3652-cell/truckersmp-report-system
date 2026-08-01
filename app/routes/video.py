@@ -1,4 +1,5 @@
 import os
+from mimetypes import guess_type
 from datetime import timedelta
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_from_directory, url_for
@@ -7,7 +8,7 @@ from flask_login import current_user, login_required
 from .. import db
 from ..forms import UploadForm
 from ..models import Video
-from ..utils import allowed_file, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, utcnow
+from ..utils import allowed_file, check_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, utcnow
 
 video_bp = Blueprint("video", __name__)
 
@@ -35,6 +36,10 @@ def list_videos():
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
+        allowed, retry = check_rate_limit(current_app, "upload", request.remote_addr)
+        if not allowed:
+            flash(f"上传过于频繁，请 {retry} 秒后再试。", "warning")
+            return render_template("upload.html", form=form), 429
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
@@ -83,7 +88,8 @@ def detail(video_id):
     video = Video.query.get_or_404(video_id)
     if not current_user.is_authenticated or (not current_user.is_admin and video.uploader_id != current_user.id):
         abort(404)
-    return render_template("video_detail.html", video=video, file_url=url_for("video.media", video_id=video.id))
+    mime_type = guess_type(video.original_filename)[0] or "application/octet-stream"
+    return render_template("video_detail.html", video=video, file_url=url_for("video.media", video_id=video.id), mime_type=mime_type)
 
 
 @video_bp.route("/media/<int:video_id>")

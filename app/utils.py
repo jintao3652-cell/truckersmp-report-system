@@ -19,7 +19,7 @@ def allowed_file(filename: str) -> bool:
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def ensure_dir(path):

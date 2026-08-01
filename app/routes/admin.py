@@ -1,4 +1,5 @@
-from flask import Blueprint, flash, redirect, render_template, url_for
+import os
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from .. import db
@@ -18,9 +19,25 @@ def guard_admin():
 
 @admin_bp.route("/")
 def dashboard():
-    videos = Video.query.order_by(Video.uploaded_at.desc()).limit(100).all()
+    status = request.args.get("status", "")
+    query = Video.query.order_by(Video.uploaded_at.desc())
+    if status in {"pending", "approved", "rejected"}:
+        query = query.filter_by(status=status)
+    videos = query.limit(100).all()
     logins = LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(200).all()
     return render_template("admin_dashboard.html", videos=videos, logins=logins)
+
+
+@admin_bp.post("/delete/<int:video_id>")
+def delete(video_id):
+    video = Video.query.get_or_404(video_id)
+    for path in (video.file_path, video.thumbnail_path):
+        if path and os.path.exists(path):
+            os.remove(path)
+    db.session.delete(video)
+    db.session.commit()
+    flash("视频及其文件已删除。", "success")
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.post("/approve/<int:video_id>")

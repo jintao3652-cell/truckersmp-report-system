@@ -1,6 +1,11 @@
 [Unit]
 Description=Run TruckersMP expired video cleanup daily
 
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/truckersmp-report-site
+ExecStart=/var/www/truckersmp-report-site/.venv/bin/python delete_expired.py
+
 [Timer]
 OnCalendar=daily
 Persistent=true
