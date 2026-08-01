@@ -13,6 +13,11 @@ from ..utils import allowed_file, check_rate_limit, dated_storage_dir, ensure_di
 video_bp = Blueprint("video", __name__)
 
 
+def _upload_page(form, status=200):
+    usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
+    return render_template("upload.html", form=form, used_bytes=usage, quota_bytes=current_app.config["MAX_USER_STORAGE_BYTES"]), status
+
+
 @video_bp.route("/")
 @login_required
 def list_videos():
@@ -39,15 +44,15 @@ def upload():
         allowed, retry = check_rate_limit(current_app, "upload", request.remote_addr)
         if not allowed:
             flash(f"上传过于频繁，请 {retry} 秒后再试。", "warning")
-            return render_template("upload.html", form=form), 429
+            return _upload_page(form, 429)
         file = form.video_file.data
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
             usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
-            return render_template("upload.html", form=form), 400
+            return _upload_page(form, 400)
         if current_user.upload_disabled:
             flash("当前账号已被禁止上传。", "danger")
-            return render_template("upload.html", form=form), 403
+            return _upload_page(form, 403)
         stored_name = make_storage_name(file.filename)
         upload_dir = ensure_dir(current_app.config["UPLOAD_FOLDER"])
         temp_path = os.path.join(upload_dir, stored_name)
@@ -85,14 +90,14 @@ def upload():
             if os.path.exists(temp_path):
                 os.remove(temp_path)
             flash("已超过个人视频容量配额。", "danger")
-            return render_template("upload.html", form=form), 413
+            return _upload_page(form, 413)
         except ValueError as exc:
             db.session.rollback()
             for path in (temp_path, final_path):
                 if path and os.path.exists(path):
                     os.remove(path)
             flash(f"视频校验失败：{exc}", "danger")
-            return render_template("upload.html", form=form), 400
+            return _upload_page(form, 400)
         except Exception:
             db.session.rollback()
             for path in (temp_path, final_path):
@@ -100,7 +105,7 @@ def upload():
                     os.remove(path)
             current_app.logger.exception("Video upload failed")
             flash("上传失败，请稍后重试。", "danger")
-            return render_template("upload.html", form=form), 500
+            return _upload_page(form, 500)
         flash("上传成功，等待审核。", "success")
         return redirect(url_for("video.detail", video_id=video.id))
     usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
