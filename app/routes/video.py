@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from .. import db
 from ..forms import UploadForm
 from ..models import Video
-from ..utils import allowed_file, check_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, probe_video, utcnow
+from ..utils import allowed_file, check_rate_limit, check_user_rate_limit, dated_storage_dir, ensure_dir, format_bytes, make_storage_name, probe_video, utcnow
 
 video_bp = Blueprint("video", __name__)
 
@@ -44,6 +44,10 @@ def upload():
         allowed, retry = check_rate_limit(current_app, "upload", request.remote_addr)
         if not allowed:
             flash(f"上传过于频繁，请 {retry} 秒后再试。", "warning")
+            return _upload_page(form, 429)
+        allowed, retry = check_user_rate_limit(current_app, "upload", current_user.id)
+        if not allowed:
+            flash(f"当前账号上传过于频繁，请 {retry} 秒后再试。", "warning")
             return _upload_page(form, 429)
         file = form.video_file.data
         if not file or not allowed_file(file.filename):

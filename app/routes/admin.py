@@ -29,7 +29,14 @@ def dashboard():
     page = max(request.args.get("page", 1, type=int), 1)
     pagination = query.paginate(page=page, per_page=25, error_out=False)
     logins = LoginAudit.query.order_by(LoginAudit.created_at.desc()).limit(200).all()
-    return render_template("admin_dashboard.html", videos=pagination.items, pagination=pagination, logins=logins)
+    users = User.query.order_by(User.created_at.desc()).limit(200).all()
+    pending_count = Video.query.filter_by(status="pending").count()
+    return render_template("admin_dashboard.html", videos=pagination.items, pagination=pagination, logins=logins, users=users, pending_count=pending_count)
+
+
+@admin_bp.get("/users")
+def users_page():
+    return render_template("admin_users.html", users=User.query.order_by(User.created_at.desc()).all())
 
 
 @admin_bp.get("/audit.csv")
@@ -51,6 +58,16 @@ def toggle_upload(user_id):
     user = User.query.get_or_404(user_id)
     user.upload_disabled = not user.upload_disabled
     db.session.commit()
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.post("/users/<int:user_id>/unlock")
+def unlock_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.locked_until = None
+    user.login_failed_count = 0
+    db.session.commit()
+    flash("账号已解锁。", "success")
     return redirect(url_for("admin.dashboard"))
 
 

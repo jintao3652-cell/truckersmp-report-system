@@ -105,3 +105,7 @@ def check_rate_limit(app, action, ip_address):
         return False, block_seconds
     db.session.commit()
     return True, 0
+
+
+def check_user_rate_limit(app, action, user_id):
+    return check_rate_limit(app, f"{action}:user", str(user_id))

@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template
 from pathlib import Path
 from flask_login import LoginManager
@@ -37,9 +38,20 @@ def create_app(config_class=Config):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Content-Security-Policy", "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; media-src 'self' blob:")
         if app.config["ENVIRONMENT"] == "production":
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
+
+    @app.get("/health")
+    def health():
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SELECT 1"))
+            video_dir = Path(app.config["VIDEO_FOLDER"])
+            return {"status": "ok", "database": "ok", "video_folder": video_dir.exists(), "writable": os.access(video_dir, os.W_OK)}
+        except Exception:
+            return {"status": "error"}, 503
 
     from .routes.auth import auth_bp
     from .routes.main import main_bp
