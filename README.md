@@ -46,3 +46,13 @@ flask --app manage.py db upgrade
 ```
 
 生产环境只执行 `db upgrade`，不要依赖启动时的 `db.create_all()`。
+
+## 首次部署检查清单
+
+1. 创建数据库并执行 `flask --app manage.py db upgrade`。
+2. 设置 `AUTO_CREATE_DB=0`、随机 `SECRET_KEY` 和 `SESSION_COOKIE_SECURE=1`。
+3. 确认运行用户可读写 `UPLOAD_FOLDER` 和 `VIDEO_FOLDER`。
+4. 安装并验证 `ffprobe -version`，生产建议设置 `REQUIRE_FFPROBE=1`。
+5. 确认 Nginx `protected-videos` 的 `alias` 与 `VIDEO_FOLDER` 完全一致。
+6. 复制并启用 cleanup service/timer，确认 `.env` 可被 systemd 读取。
+7. 检查 Nginx `client_max_body_size`、HTTPS 和反向代理真实 IP 配置。

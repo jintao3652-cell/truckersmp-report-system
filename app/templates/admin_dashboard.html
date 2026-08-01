@@ -1,28 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="h4 mb-3">管理后台</h1>
-<div class="btn-group mb-3"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">全部</a><a class="btn btn-sm btn-outline-warning" href="{{ url_for('admin.dashboard', status='pending') }}">待审核</a><a class="btn btn-sm btn-outline-success" href="{{ url_for('admin.dashboard', status='approved') }}">已通过</a><a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin.dashboard', status='rejected') }}">已拒绝</a></div>
+<div class="btn-group mb-3">
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">全部</a>
+  <a class="btn btn-sm btn-outline-warning" href="{{ url_for('admin.dashboard', status='pending') }}">待审核</a>
+  <a class="btn btn-sm btn-outline-success" href="{{ url_for('admin.dashboard', status='approved') }}">已通过</a>
+  <a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin.dashboard', status='rejected') }}">已拒绝</a>
+</div>
 <div class="list-group">
-  {% for video in videos %}
-    <div class="list-group-item">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <strong>{{ video.title }}</strong><br>
-          <small class="text-muted">{{ video.report_id }} / {{ video.status }}</small>
-        </div>
-        <div class="btn-group">
-          <form method="post" action="{{ url_for('admin.approve', video_id=video.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success" type="submit">通过</button></form>
-          <form method="post" action="{{ url_for('admin.reject', video_id=video.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger" type="submit">拒绝</button></form>
-          <form method="post" action="{{ url_for('admin.delete', video_id=video.id, status=request.args.get('status', '')) }}" class="d-inline" onsubmit="return confirm('确认删除这个视频及其文件吗？');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger" type="submit">删除</button></form>
-        </div>
-      </div>
-    </div>
-  {% else %}
-    <div class="text-muted">暂无待处理项目。</div>
-  {% endfor %}
+{% for video in videos %}
+<div class="list-group-item d-flex justify-content-between align-items-center">
+  <div><strong>{{ video.title }}</strong><br><small>{{ video.report_id }} / {{ video.status }}</small></div>
+  <div class="btn-group">
+    <form method="post" action="{{ url_for('admin.approve', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">通过</button></form>
+    <form method="post" action="{{ url_for('admin.reject', video_id=video.id, status=request.args.get('status', '')) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger">拒绝</button></form>
+    <form method="post" action="{{ url_for('admin.delete', video_id=video.id, status=request.args.get('status', '')) }}" onsubmit="return confirm('确认删除这个视频及其文件吗？');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">删除</button></form>
+  </div>
+</div>
+{% else %}<div class="text-muted">暂无视频</div>{% endfor %}
 </div>
 <h2 class="h5 mt-4">登录记录</h2>
-<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>时间</th><th>账号</th><th>结果</th><th>IP</th><th>设备</th><th>User-Agent / 语言 / 来源</th></tr></thead><tbody>
-{% for item in logins %}<tr><td>{{ item.created_at }}</td><td>{{ item.user.username if item.user else item.username_input }}</td><td>{% if item.success %}<span class="text-success">成功</span>{% else %}<span class="text-danger">失败</span>{% endif %}</td><td>{{ item.ip_address }}</td><td>{{ item.device_type }}</td><td><small>{{ item.user_agent }}<br>{{ item.accept_language }}<br>{{ item.referrer or '-' }}</small></td></tr>{% else %}<tr><td colspan="6">暂无登录记录</td></tr>{% endfor %}
+<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>时间</th><th>账号</th><th>结果</th><th>IP</th><th>设备</th><th>详细信息</th></tr></thead><tbody>
+{% for item in logins %}<tr><td>{{ item.created_at }}</td><td>{{ item.user.username if item.user else item.username_input }}</td><td>{{ '成功' if item.success else '失败' }}</td><td>{{ item.ip_address }}</td><td>{{ item.device_type }}</td><td><small>{{ item.user_agent }}<br>{{ item.accept_language }}<br>{{ item.referrer or '-' }}</small></td></tr>{% else %}<tr><td colspan="6">暂无记录</td></tr>{% endfor %}
 </tbody></table></div>
 {% endblock %}

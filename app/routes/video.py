@@ -2,7 +2,7 @@ import os
 from mimetypes import guess_type
 from datetime import timedelta
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, Response, abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from .. import db
@@ -44,17 +44,16 @@ def upload():
         if not file or not allowed_file(file.filename):
             flash("视频格式不受支持。", "danger")
             return render_template("upload.html", form=form)
-        current_usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
-        if current_usage + (request.content_length or 0) > current_app.config["MAX_USER_STORAGE_BYTES"]:
-            flash("已超过个人视频容量配额。", "danger")
-            return render_template("upload.html", form=form), 413
-
         stored_name = make_storage_name(file.filename)
         upload_dir = ensure_dir(current_app.config["UPLOAD_FOLDER"])
         temp_path = os.path.join(upload_dir, stored_name)
         final_path = None
         try:
             file.save(temp_path)
+            file_size = os.path.getsize(temp_path)
+            current_usage = db.session.query(db.func.coalesce(db.func.sum(Video.file_size), 0)).filter_by(uploader_id=current_user.id).scalar()
+            if current_usage + file_size > current_app.config["MAX_USER_STORAGE_BYTES"]:
+                raise QuotaExceeded
             duration = probe_video(temp_path, current_app.config["FFPROBE_PATH"])
             if duration is None and current_app.config["REQUIRE_FFPROBE"]:
                 raise ValueError("ffprobe is required for video validation")
@@ -77,6 +76,19 @@ def upload():
             )
             db.session.add(video)
             db.session.commit()
+        except QuotaExceeded:
+            db.session.rollback()
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            flash("已超过个人视频容量配额。", "danger")
+            return render_template("upload.html", form=form), 413
+        except ValueError as exc:
+            db.session.rollback()
+            for path in (temp_path, final_path):
+                if path and os.path.exists(path):
+                    os.remove(path)
+            flash(f"视频校验失败：{exc}", "danger")
+            return render_template("upload.html", form=form), 400
         except Exception:
             db.session.rollback()
             for path in (temp_path, final_path):
@@ -106,11 +118,17 @@ def media(video_id):
         abort(404)
     if not os.path.exists(video.file_path):
         abort(404)
-    response = send_file(video.file_path, as_attachment=False, conditional=True)
     # Nginx can serve the large file directly when configured with X-Accel-Redirect.
     if current_app.config.get("MEDIA_ACCEL_REDIRECT", True):
-        relative_path = os.path.relpath(video.file_path, current_app.config["VIDEO_FOLDER"]).replace(os.sep, "/")
-        response.headers["X-Accel-Redirect"] = f"/protected-videos/{relative_path}"
-        response.headers["Content-Disposition"] = "inline"
-        response.direct_passthrough = True
-    return response
+        base = os.path.realpath(current_app.config["VIDEO_FOLDER"])
+        real_path = os.path.realpath(video.file_path)
+        if os.path.commonpath((base, real_path)) != base:
+            current_app.logger.error("Video path outside VIDEO_FOLDER: %s", video.file_path)
+            abort(500)
+        relative_path = os.path.relpath(real_path, base).replace(os.sep, "/")
+        return Response(status=200, headers={"X-Accel-Redirect": f"/protected-videos/{relative_path}", "Content-Type": guess_type(video.original_filename)[0] or "application/octet-stream", "Content-Disposition": "inline"})
+    return send_file(video.file_path, as_attachment=False, conditional=True)
+
+
+class QuotaExceeded(Exception):
+    pass

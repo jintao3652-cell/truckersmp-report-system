@@ -1,4 +1,5 @@
 import os
+
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
@@ -36,12 +37,12 @@ def delete(video_id):
         if path and os.path.exists(path):
             try:
                 os.remove(path)
-            except OSError as exc:
+            except OSError:
                 current_app.logger.exception("Failed to remove video file %s", path)
-                file_errors.append(str(exc))
+                file_errors.append(path)
     db.session.delete(video)
     db.session.commit()
-    flash("视频及其文件已删除。", "success")
+    flash("记录已删除，但部分文件删除失败，请检查日志。" if file_errors else "视频及其文件已删除。", "warning" if file_errors else "success")
     return redirect(url_for("admin.dashboard", status=request.args.get("status", "")))
 
 

@@ -5,3 +5,4 @@ Description=Clean expired TruckersMP videos
 Type=oneshot
 WorkingDirectory=/var/www/truckersmp-report-site
 ExecStart=/var/www/truckersmp-report-site/.venv/bin/python delete_expired.py
+EnvironmentFile=/var/www/truckersmp-report-site/.env
