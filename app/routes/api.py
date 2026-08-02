@@ -71,6 +71,8 @@ def video_detail(video_id):
         return jsonify({"error": "not_found"}), 404
     media_url = url_for("video.media", video_id=video.id, _external=True)
     share_url = url_for("video.shared_detail", share_code=video.share_code, _external=True) if video.status == "approved" and video.share_enabled else None
+    if video.status == "approved" and video.share_enabled and current_app.config.get("STORAGE_BACKEND") != "s3":
+        media_url = url_for("video.shared_media", share_code=video.share_code, _external=True)
     if current_app.config.get("STORAGE_BACKEND") == "s3" and video.status == "approved":
         storage = get_storage(current_app.config)
         if storage.exists(video.file_path):

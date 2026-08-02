@@ -20,10 +20,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const progress = document.querySelector("#upload-progress");
   if (form && progress) form.addEventListener("submit", async (event) => {
     const file = input && input.files && input.files[0];
-    if (!file || typeof uploadInChunks !== "function" || file.size < 16 * 1024 * 1024) return;
+    if (!file || typeof uploadInChunks !== "function") return;
     event.preventDefault();
     progress.classList.remove("d-none");
-    window.onUploadProgress = (value) => { progress.value = value; };
+    progress.setAttribute("aria-label", "视频上传进度");
+    progress.value = 0;
+    window.onUploadProgress = (value) => { progress.value = value; const label = document.querySelector('#upload-progress-label'); if (label) label.textContent = `${Math.round(value)}%`; };
     try {
       const metadata = {
         report_id: form.querySelector('[name="report_id"]')?.value || "api",
@@ -35,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = `/videos/${result.id}`;
     } catch (error) {
       progress.classList.add("d-none");
-      alert(error.message);
+      alert(`上传失败：${error.message}`);
     }
   });
 });

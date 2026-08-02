@@ -18,7 +18,8 @@
   </div>
   {{ form.submit(class="btn btn-primary") }}
 </form>
-<progress id="upload-progress" class="w-100 d-none" max="100" value="0"></progress>
+<progress id="upload-progress" class="w-100 d-none" max="100" value="0">0%</progress>
+<div id="upload-progress-label" class="small text-muted" aria-live="polite"></div>
 <button type="button" id="chunk-upload-button" class="btn btn-outline-secondary mt-2">使用分片上传</button>
 <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chunk_upload.js') }}"></script>
