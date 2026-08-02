@@ -43,7 +43,18 @@ def create_app(config_class=Config):
     @app.context_processor
     def translations():
         lang = session.get("lang") or request.accept_languages.best_match(["zh", "en"]) or "zh"
-        return {"lang": lang, "t": lambda key: translate(lang, key), "te": lambda message: translate_error(lang, message)}
+        return {"lang": lang, "t": lambda key: translate(lang, key), "te": lambda message: translate_error(lang, message), "upload_base_url": app.config.get("UPLOAD_BASE_URL", "")}
+
+    @app.after_request
+    def upload_cors(response):
+        origin = request.headers.get("Origin")
+        if request.path.startswith("/api/v1/uploads") and origin == app.config.get("UPLOAD_CORS_ORIGIN"):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-CSRFToken"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
+            response.headers["Vary"] = "Origin"
+        return response
 
     @app.after_request
     def security_headers(response):

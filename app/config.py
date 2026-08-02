@@ -35,6 +35,11 @@ class Config:
     NOTIFY_ADMIN_EMAIL = os.getenv("NOTIFY_ADMIN_EMAIL", "")
     SHARE_VIEW_NOTIFY_COOLDOWN_SECONDS = int(os.getenv("SHARE_VIEW_NOTIFY_COOLDOWN_SECONDS", "3600"))
     API_REQUIRE_BEARER = os.getenv("API_REQUIRE_BEARER", "1" if ENVIRONMENT == "production" else "0") == "1"
+    PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://reports.cnrpg.top:8335")
+    UPLOAD_BASE_URL = os.getenv("UPLOAD_BASE_URL", "http://upload.cnrpg.top:17023").rstrip("/")
+    UPLOAD_CORS_ORIGIN = os.getenv("UPLOAD_CORS_ORIGIN", PUBLIC_BASE_URL).rstrip("/")
+    UPLOAD_ALLOW_SESSION = os.getenv("UPLOAD_ALLOW_SESSION", "1") == "1"
+    SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", "") or None
     SENTRY_DSN = os.getenv("SENTRY_DSN", "")
     UPLOAD_SESSION_EXPIRES_SECONDS = int(os.getenv("UPLOAD_SESSION_EXPIRES_SECONDS", "86400"))
     UPLOAD_CHUNK_MAX_BYTES = int(os.getenv("UPLOAD_CHUNK_MAX_BYTES", str(16 * 1024 * 1024)))

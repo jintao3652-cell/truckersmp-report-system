@@ -45,7 +45,9 @@ def has_scope(user, scope):
 
 
 def request_user():
-    if current_app.config.get("API_REQUIRE_BEARER") and not request.headers.get("Authorization", "").startswith("Bearer "):
+    has_bearer = request.headers.get("Authorization", "").startswith("Bearer ")
+    browser_upload = current_app.config.get("UPLOAD_ALLOW_SESSION") and request.headers.get("Origin") == current_app.config.get("UPLOAD_CORS_ORIGIN")
+    if current_app.config.get("API_REQUIRE_BEARER") and not has_bearer and not browser_upload:
         return None
     return current_user if current_user.is_authenticated else token_user()
 
