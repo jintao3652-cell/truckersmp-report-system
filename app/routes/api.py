@@ -88,7 +88,7 @@ def approve_video(video_id):
     video.rejection_reason = ""
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="approve", source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
     db.session.commit()
-    send_user_notification(current_app, video.uploader, "你的视频已通过审核", f"视频《{video.title}》已通过 API 审核。")
+    send_user_notification(current_app, video.uploader, "浣犵殑瑙嗛宸查€氳繃瀹℃牳", f"瑙嗛銆妠video.title}銆嬪凡閫氳繃 API 瀹℃牳銆?)
     return jsonify({"id": video.id, "status": video.status})
 
 
@@ -98,12 +98,12 @@ def reject_video(video_id):
     if not user or (not user.is_admin and user.role not in {"admin", "moderator"}) or not has_scope(user, "moderate"):
         return jsonify({"error": "admin_required"}), 403
     video = Video.query.get_or_404(video_id)
-    reason = str((request.get_json(silent=True) or {}).get("reason", "")).strip()[:5000] or "管理员审核拒绝"
+    reason = str((request.get_json(silent=True) or {}).get("reason", "")).strip()[:5000] or "绠＄悊鍛樺鏍告嫆缁?
     video.status = "rejected"
     video.rejection_reason = reason
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="reject", reason=reason, source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
     db.session.commit()
-    send_user_notification(current_app, video.uploader, "你的视频未通过审核", f"视频《{video.title}》未通过审核。\n原因：{reason}")
+    send_user_notification(current_app, video.uploader, "浣犵殑瑙嗛鏈€氳繃瀹℃牳", f"瑙嗛銆妠video.title}銆嬫湭閫氳繃瀹℃牳銆俓n鍘熷洜锛歿reason}")
     return jsonify({"id": video.id, "status": video.status, "rejection_reason": reason})
 
 
@@ -282,7 +282,7 @@ def complete_upload(session_id):
                 os.remove(path)
         current_app.logger.exception("Chunked upload completion failed")
         return jsonify({"error": "completion_failed"}), 500
-    send_notification(current_app, "鏂拌棰戠瓑寰呭鏍?, f"瑙嗛 #{video.id}锛坽video.title}锛夊凡閫氳繃 API 涓婁紶锛岀瓑寰呯鐞嗗憳瀹℃牳銆?)
+    send_notification(current_app, "新视频等待审核", f"视频 #{video.id}（{video.title}）已通过 API 上传，等待管理员审核。")
     return jsonify({"id": video.id, "status": video.status}), 201
 
 
