@@ -1,1 +1,1 @@
-{% extends "base.html" %}{% block content %}<h1>重置密码</h1><form method="post">{{ form.hidden_tag() }}{{ form.email(class="form-control mb-3", placeholder="邮箱") }}{{ form.submit(class="btn btn-primary") }}</form>{% endblock %}
+{% extends "base.html" %}{% block content %}<h1>{{ t('reset_password') }}</h1><form method="post">{{ form.hidden_tag() }}{{ form.email(class="form-control mb-3", placeholder=t('email')) }}{{ form.submit(class="btn btn-primary") }}</form>{% endblock %}

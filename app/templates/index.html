@@ -1,8 +1,3 @@
 {% extends "base.html" %}
-{% block title %}首页 - TruckersMP 举报视频存储{% endblock %}
-{% block content %}
-<div class="p-4 bg-light border rounded-3">
-  <h1 class="h3 mb-2">TruckersMP 举报视频存储</h1>
-  <p class="mb-0">用于上传、管理和公开播放举报视频。</p>
-</div>
-{% endblock %}
+{% block title %}{{ t('home') }} - {{ t('site_name') }}{% endblock %}
+{% block content %}<div class="p-4 bg-light border rounded-3"><h1 class="h3 mb-2">{{ t('site_name') }}</h1><p class="mb-0">{{ t('media_description') }}</p></div>{% endblock %}
