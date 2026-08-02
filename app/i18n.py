@@ -1,5 +1,7 @@
 """Small dependency-free interface translation catalog."""
 
+import re
+
 TRANSLATIONS = {
     "zh": {
         "site_name": "TruckersMP 视频库", "videos": "我的视频", "upload": "上传", "admin": "管理后台", "users": "用户管理",
@@ -47,4 +49,18 @@ def translate(lang, key):
 
 
 def translate_error(lang, message):
-    return ERROR_TRANSLATIONS.get(lang, {}).get(message, message)
+    if lang != "zh":
+        return message
+    exact = ERROR_TRANSLATIONS["zh"].get(message)
+    if exact:
+        return exact
+    if re.match(r"^Field must be between \d+ and \d+ characters long\.$", message):
+        bounds = re.findall(r"\d+", message)
+        return f"长度必须在 {bounds[0]} 到 {bounds[1]} 个字符之间。"
+    if re.match(r"^Field must be at least \d+ characters long\.$", message):
+        minimum = re.search(r"\d+", message).group()
+        return f"长度至少为 {minimum} 个字符。"
+    if re.match(r"^Field must be less than \d+ characters long\.$", message):
+        maximum = re.search(r"\d+", message).group()
+        return f"长度不能超过 {maximum} 个字符。"
+    return message
