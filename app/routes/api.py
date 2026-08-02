@@ -1,9 +1,9 @@
-﻿import hashlib
+import hashlib
 import os
 import secrets
 from datetime import timedelta
 from pathlib import Path
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, url_for
 from flask_login import current_user, login_required
 from .. import db
 from ..models import ApiToken, MediaJob, ModerationAudit, UploadSession, User, Video
@@ -23,7 +23,6 @@ def token_user():
         return None
     token.last_used_at = utcnow()
     db.session.commit()
-    return token.user
     return token.user
 
 
@@ -70,7 +69,13 @@ def video_detail(video_id):
     video = Video.query.get_or_404(video_id)
     if not user.is_admin and video.uploader_id != user.id:
         return jsonify({"error": "not_found"}), 404
-    return jsonify({"id": video.id, "title": video.title, "description": video.description, "status": video.status, "rejection_reason": video.rejection_reason, "report_id": video.report_id, "file_size": video.file_size, "duration": video.duration, "thumbnail_url": f"/videos/{video.id}/thumbnail", "media_url": f"/videos/media/{video.id}", "share_url": f"/videos/share/{video.share_code}" if video.status == "approved" and video.share_enabled else None, "uploaded_at": video.uploaded_at.isoformat()})
+    media_url = url_for("video.media", video_id=video.id, _external=True)
+    share_url = url_for("video.shared_detail", share_code=video.share_code, _external=True) if video.status == "approved" and video.share_enabled else None
+    if current_app.config.get("STORAGE_BACKEND") == "s3" and video.status == "approved":
+        storage = get_storage(current_app.config)
+        if storage.exists(video.file_path):
+            media_url = storage.signed_url(video.file_path, current_app.config["STORAGE_SIGNED_URL_SECONDS"])
+    return jsonify({"id": video.id, "title": video.title, "description": video.description, "status": video.status, "rejection_reason": video.rejection_reason, "report_id": video.report_id, "file_size": video.file_size, "duration": video.duration, "thumbnail_url": url_for("video.thumbnail", video_id=video.id, _external=True), "media_url": media_url, "share_url": share_url, "uploaded_at": video.uploaded_at.isoformat()})
 
 
 @api_bp.post("/videos/<int:video_id>/approve")
@@ -83,6 +88,7 @@ def approve_video(video_id):
     video.rejection_reason = ""
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="approve", source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
     db.session.commit()
+    send_user_notification(current_app, video.uploader, "你的视频已通过审核", f"视频《{video.title}》已通过 API 审核。")
     return jsonify({"id": video.id, "status": video.status})
 
 
@@ -97,6 +103,7 @@ def reject_video(video_id):
     video.rejection_reason = reason
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="reject", reason=reason, source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
     db.session.commit()
+    send_user_notification(current_app, video.uploader, "你的视频未通过审核", f"视频《{video.title}》未通过审核。\n原因：{reason}")
     return jsonify({"id": video.id, "status": video.status, "rejection_reason": reason})
 
 
