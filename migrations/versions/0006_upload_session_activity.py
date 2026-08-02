@@ -9,11 +9,14 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("upload_session", sa.Column("updated_at", sa.DateTime(), nullable=True))
     bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("upload_session")}
+    if "updated_at" not in columns:
+        op.add_column("upload_session", sa.Column("updated_at", sa.DateTime(), nullable=True))
     bind.execute(sa.text("UPDATE upload_session SET updated_at = created_at WHERE updated_at IS NULL"))
     if bind.dialect.name != "sqlite":
-        op.alter_column("upload_session", "updated_at", nullable=False)
+        op.alter_column("upload_session", "updated_at", existing_type=sa.DateTime(), nullable=False)
 
 
 def downgrade():
