@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 from pathlib import Path
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
+from .i18n import translate
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -41,7 +42,8 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def translations():
-        return {"lang": (request.accept_languages.best_match(["zh", "en"]) or "zh")}
+        lang = session.get("lang") or request.accept_languages.best_match(["zh", "en"]) or "zh"
+        return {"lang": lang, "t": lambda key: translate(lang, key)}
 
     @app.after_request
     def security_headers(response):
