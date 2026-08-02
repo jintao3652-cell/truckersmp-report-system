@@ -282,7 +282,7 @@ def complete_upload(session_id):
                 os.remove(path)
         current_app.logger.exception("Chunked upload completion failed")
         return jsonify({"error": "completion_failed"}), 500
-    send_notification(current_app, "新视频等待审核", f"视频 #{video.id}（{video.title}）已通过 API 上传，等待管理员审核。")
+    send_notification(current_app, "鏂拌棰戠瓑寰呭鏍?, f"瑙嗛 #{video.id}锛坽video.title}锛夊凡閫氳繃 API 涓婁紶锛岀瓑寰呯鐞嗗憳瀹℃牳銆?)
     return jsonify({"id": video.id, "status": video.status}), 201
 
 
