@@ -1,7 +1,6 @@
 import os
 import csv
 import io
-import os
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
