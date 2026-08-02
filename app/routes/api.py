@@ -88,7 +88,7 @@ def approve_video(video_id):
     video.rejection_reason = ""
     db.session.add(prepare_audit(ModerationAudit(video_id=video.id, admin_id=user.id, action="approve", source="api", ip_address=request.remote_addr, user_agent=request.user_agent.string[:500], video_title=video.title)))
     db.session.commit()
-    send_user_notification(current_app, video.uploader, "Video rejected", f"Video {video.title} was rejected. Reason: {reason}")
+    send_user_notification(current_app, video.uploader, "Video approved", f"Video {video.title} was approved via API.")
     return jsonify({"id": video.id, "status": video.status})
 
 
