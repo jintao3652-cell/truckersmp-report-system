@@ -36,5 +36,15 @@ TRANSLATIONS = {
 }
 
 
+ERROR_TRANSLATIONS = {
+    "zh": {"This field is required.": "此字段为必填项。", "Invalid email address.": "邮箱地址无效。", "Field must be equal to password.": "两次输入的密码必须一致。", "Supported video formats only": "仅支持常见视频格式。"},
+    "en": {},
+}
+
+
 def translate(lang, key):
     return TRANSLATIONS.get(lang, TRANSLATIONS["zh"]).get(key, TRANSLATIONS["zh"].get(key, key))
+
+
+def translate_error(lang, message):
+    return ERROR_TRANSLATIONS.get(lang, {}).get(message, message)

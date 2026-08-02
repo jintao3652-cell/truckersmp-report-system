@@ -8,7 +8,7 @@ from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
-from .i18n import translate
+from .i18n import translate, translate_error
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -43,7 +43,7 @@ def create_app(config_class=Config):
     @app.context_processor
     def translations():
         lang = session.get("lang") or request.accept_languages.best_match(["zh", "en"]) or "zh"
-        return {"lang": lang, "t": lambda key: translate(lang, key)}
+        return {"lang": lang, "t": lambda key: translate(lang, key), "te": lambda message: translate_error(lang, message)}
 
     @app.after_request
     def security_headers(response):
