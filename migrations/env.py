@@ -1,10 +1,11 @@
 from logging.config import fileConfig
+from pathlib import Path
 from alembic import context
 from flask import current_app
 from sqlalchemy import engine_from_config, pool
 
 config = context.config
-if config.config_file_name:
+if config.config_file_name and Path(config.config_file_name).exists():
     fileConfig(config.config_file_name)
 target_metadata = current_app.extensions["migrate"].db.metadata
 
