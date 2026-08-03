@@ -1,11 +1,16 @@
 import os
 from flask import Flask, render_template, request, session
 from pathlib import Path
+from dotenv import load_dotenv
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+# Load the project .env for Flask CLI, tests, and direct Gunicorn launches.
+# systemd still supplies EnvironmentFile; existing process variables win.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
 from .config import Config
 from .i18n import translate, translate_error
